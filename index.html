@@ -24,9 +24,9 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 
-    <!-- Firebase SDKs (Diperbarui ke versi 10 terbaru agar kompatibel dengan Server Jakarta) -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+    <!-- Firebase SDKs (Dikembalikan ke Versi 8.10.1 Paling Stabil) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <!-- PWA Dynamic Manifest Injection & Install Prompt Handler -->
     <script>
@@ -273,7 +273,7 @@
             }).then(() => {
                 hideLoading();
                 customAlert("Berhasil", "Seluruh data perlombaan telah direset menjadi nol.", "info");
-                fetchParticipants();
+                fetchParticipants().then(() => render());
             }).catch((e) => {
                 hideLoading();
                 customAlert("Error", "Gagal mereset data: " + e.message, "error");
@@ -282,35 +282,21 @@
 
         // --- FIREBASE: SIMPAN DAN AMBIL DATA ---
         function saveParticipantResult(res) {
-            // Sistem Timeout 5 Detik Anti-Nganggur
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error("TimeoutKoneksi")), 5000);
-            });
-
-            return Promise.race([
-                db.collection("peserta_stc").doc(res.npa).set(res),
-                timeoutPromise
-            ])
-            .then(() => {
-                console.log("Data berhasil dikirim ke Cloud Firebase!");
-            })
-            .catch((error) => {
-                console.error("Error menyimpan data: ", error);
-                customAlert("Koneksi Lemah", "Nilai Anda tetap aman tersimpan, namun saat ini gagal dikirim ke pusat karena jaringan. Silakan screenshot halaman hasil ujian Anda.", "warning");
-            });
+            // Membiarkan Firebase bekerja natural tanpa putus paksa (timeout)
+            return db.collection("peserta_stc").doc(res.npa).set(res)
+                .then(() => {
+                    console.log("Data berhasil dikirim ke Cloud Firebase!");
+                })
+                .catch((error) => {
+                    console.error("Error menyimpan data: ", error);
+                    customAlert("Koneksi Gagal", "Gagal mengirim ke pusat. Pastikan koneksi internet stabil.", "error");
+                });
         }
 
         async function fetchParticipants() {
             try {
-                // Sistem Timeout 5 Detik Anti-Nganggur
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error("TimeoutKoneksi")), 5000);
-                });
-
-                const snapshot = await Promise.race([
-                    db.collection("peserta_stc").get(),
-                    timeoutPromise
-                ]);
+                // Menarik data natural tanpa timeout
+                const snapshot = await db.collection("peserta_stc").get();
                 
                 let list = [];
                 snapshot.forEach(doc => {
