@@ -278,7 +278,11 @@
         // --- FIREBASE: SIMPAN & AMBIL DATA (ROBUST & FAST) ---
         async function saveParticipantResult(res) {
             try {
-                await db.collection("peserta_stc").doc(res.npa.toString()).set(res);
+                // Timeout 10 detik agar tidak hang
+                const savePromise = db.collection("peserta_stc").doc(res.npa.toString()).set(res);
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout: Server Firebase tidak merespons (10 detik).")), 10000));
+                
+                await Promise.race([savePromise, timeoutPromise]);
                 console.log("Data berhasil disimpan ke Cloud Firestore!");
                 return true;
             } catch (error) {
@@ -289,7 +293,12 @@
 
         async function fetchParticipants() {
             try {
-                const snapshot = await db.collection("peserta_stc").get();
+                // Timeout 10 detik agar tidak hang
+                const fetchPromise = db.collection("peserta_stc").get();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout: Server Firebase tidak merespons (10 detik).")), 10000));
+                
+                const snapshot = await Promise.race([fetchPromise, timeoutPromise]);
+                
                 let list = [];
                 snapshot.forEach(doc => {
                     list.push(doc.data());
@@ -452,7 +461,7 @@
                 switchView('result');
             } catch (e) {
                 hideLoading();
-                customAlert("Gagal Menyimpan ke Cloud", "Koneksi ke Firebase gagal. Nilai tetap tercatat lokal. Silakan lapor panitia.", "error", () => {
+                customAlert("Gagal Menyimpan ke Cloud", "Detail Error: <strong>" + e.message + "</strong><br><br>Jika tertulis <em>'Missing or insufficient permissions'</em>, berarti Aturan Firebase (Rules) Anda kedaluwarsa.", "error", () => {
                     switchView('result');
                 });
             }
@@ -471,7 +480,7 @@
                     switchView('panitia_dash');
                 } catch(e) {
                     btn.innerHTML = 'Masuk Dashboard';
-                    customAlert('Koneksi Gagal', 'Gagal memuat data dari server. Periksa aturan keamanan Firestore (Pastikan aturan dalam mode allow read, write if true).', 'error');
+                    customAlert('Koneksi Gagal', 'Detail Error: <strong>' + e.message + '</strong><br><br>Jika tertulis <em>"Missing or insufficient permissions"</em>, masuk ke Firebase Console > Firestore > Rules, ubah menjadi "allow read, write: if true;".', 'error');
                 }
             } else {
                 customAlert('Akses Ditolak', 'Username atau Password Panitia salah.', 'error');
