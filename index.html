@@ -350,6 +350,36 @@
             scoreData: null
         };
 
+        // --- SISTEM PENYIMPANAN LOKAL (ANTI-REFRESH) ---
+        function saveLocalState() {
+            const dataToSave = {
+                view: state.view,
+                pesertaNama: state.pesertaNama,
+                pesertaAsal: state.pesertaAsal,
+                pesertaNPA: state.pesertaNPA,
+                currentQuestion: state.currentQuestion,
+                answers: state.answers,
+                shuffledQuestions: state.shuffledQuestions,
+                timeLeft: state.timeLeft,
+                examStarted: state.examStarted,
+                violations: state.violations,
+                scoreData: state.scoreData
+            };
+            localStorage.setItem('stc_cbt_state', JSON.stringify(dataToSave));
+        }
+
+        function clearLocalState() {
+            localStorage.removeItem('stc_cbt_state');
+        }
+
+        // Peringatan jika peserta mencoba merefresh/menutup tab saat ujian
+        window.addEventListener('beforeunload', function (e) {
+            if (state.view === 'ujian') {
+                e.preventDefault();
+                e.returnValue = ''; // Memicu dialog konfirmasi standar browser
+            }
+        });
+
         // Load data peserta (Sekarang terhubung dengan Live Database Firebase)
         function getRegisteredParticipants() {
             // Mengurutkan berdasarkan nilai tertinggi, jika sama urutkan dari durasi tercepat
@@ -640,6 +670,7 @@
             state.examStarted = true;
             state.view = 'ujian';
 
+            saveLocalState(); // Simpan state awal ke penyimpanan lokal
             render();
             startTimer();
             initAntiCheat();
@@ -652,6 +683,8 @@
                 if(state.timeLeft > 0) {
                     state.timeLeft--;
                     updateTimerDisplay();
+                    // Simpan status waktu setiap 5 detik agar jika direfresh, timer tidak mengulang dari 90 menit
+                    if(state.timeLeft % 5 === 0) saveLocalState(); 
                 } else {
                     clearInterval(state.timerInterval);
                     finishExam();
@@ -693,6 +726,7 @@
 
         function registerViolation() {
             state.violations++;
+            saveLocalState(); // Simpan penambahan pelanggaran ke memori
             showViolationModal();
         }
 
@@ -818,12 +852,14 @@
 
         function selectAnswer(qIdx, optIdx) {
             state.answers[qIdx] = optIdx;
+            saveLocalState(); // Auto-save setiap menjawab
             render();
         }
 
         function nextQuestion() {
             if(state.currentQuestion < state.shuffledQuestions.length - 1) {
                 state.currentQuestion++;
+                saveLocalState(); // Auto-save posisi soal
                 render();
             }
         }
@@ -831,12 +867,14 @@
         function prevQuestion() {
             if(state.currentQuestion > 0) {
                 state.currentQuestion--;
+                saveLocalState();
                 render();
             }
         }
 
         function goToQuestion(idx) {
             state.currentQuestion = idx;
+            saveLocalState();
             render();
         }
 
@@ -890,6 +928,7 @@
             
             hideLoading();
             state.view = 'hasil';
+            saveLocalState(); // Simpan tampilan hasil akhir
             render();
         }
 
@@ -939,12 +978,32 @@
 
         function switchView(v) {
             state.view = v;
+            if (v === 'home') {
+                clearLocalState(); // Bersihkan sesi otomatis jika kembali ke beranda
+            }
             render();
         }
 
         // Inisialisasi Pertama
         window.onload = function() {
+            // Cek apakah ada sesi ujian yang nyangkut (pemulihan otomatis)
+            const savedState = localStorage.getItem('stc_cbt_state');
+            if(savedState) {
+                try {
+                    const parsed = JSON.parse(savedState);
+                    Object.assign(state, parsed); // Pulihkan seluruh status ujian
+                } catch(e) {
+                    console.error("Gagal memulihkan sesi ujian", e);
+                }
+            }
+
             render();
+
+            // Jika saat dimuat ulang ternyata posisi masih sedang ujian, lanjutkan timer & anti-cheat
+            if(state.view === 'ujian') {
+                startTimer();
+                initAntiCheat();
+            }
         };
     </script>
 </body>
