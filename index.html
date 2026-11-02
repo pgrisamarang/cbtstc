@@ -22,6 +22,64 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- PWA Dynamic Manifest Injection -->
+    <script>
+        const manifestData = {
+            "name": "Smart Teacher Competition CBT",
+            "short_name": "STC CBT",
+            "start_url": "./",
+            "display": "standalone",
+            "background_color": "#0f172a",
+            "theme_color": "#10b981",
+            "icons": [
+                {
+                    "src": "logo_pgri.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                },
+                {
+                    "src": "logo_pgri.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+        const stringManifest = JSON.stringify(manifestData);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        const linkTag = document.createElement('link');
+        linkTag.rel = 'manifest';
+        linkTag.href = manifestURL;
+        document.head.appendChild(linkTag);
+
+        // Register Service Worker untuk dukungan offline & PWA cache
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', (e) => {
+                        e.waitUntil(
+                            caches.open('stc-cbt-v1').then((cache) => {
+                                return cache.addAll(['./']);
+                            })
+                        );
+                    });
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(
+                            caches.match(e.request).then((response) => {
+                                return response || fetch(e.request);
+                            })
+                        );
+                    });
+                `;
+                const swBlob = new Blob([swCode], {type: 'text/javascript'});
+                const swUrl = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swUrl)
+                    .then(() => console.log('PWA Service Worker terdaftar dengan sukses!'))
+                    .catch((err) => console.log('Gagal mendaftarkan SW:', err));
+            });
+        }
+    </script>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
@@ -42,7 +100,7 @@
         const db = firebase.firestore();
 
         // --- DATA SOAL STC (Berdasarkan Kisi-Kisi) ---
-         const bankSoal = [
+        const bankSoal = [
             // AD/ART (40% - 20 Soal)
             { id: 1, cat: "AD/ART", text: "Organisasi PGRI merupakan kelanjutan dari Persatuan Guru Hindia Belanda (PGHB) yang didirikan pada tahun...", options: ["1908", "1912", "1928", "1945"], answer: 1 },
             { id: 2, cat: "AD/ART", text: "Sifat organisasi PGRI yang bermakna tidak memandang perbedaan tempat kerja, agama, dan asal-usul adalah...", options: ["Independen", "Nonpartisan", "Unitaristik", "Profesional"], answer: 2 },
@@ -366,7 +424,7 @@
                 if(state.answers[idx] === q.answer) correct++;
             });
 
-            // Bobot maksimal 100 untuk 50 soal (ini sampel ada 20 soal, kita anggap total bobot 100)
+            // Bobot maksimal 100 untuk 50 soal
             let baseScore = (correct / state.shuffledQuestions.length) * 100;
             let finalScore = baseScore - (state.violations * 1); // Penalti 1% per violation
             if (finalScore < 0) finalScore = 0;
@@ -417,10 +475,10 @@
                     
                     <div class="glass-panel max-w-4xl w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10">
                         <div class="md:w-1/2 p-10 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white text-center md:text-left">
-                            <img src="logo_pgri.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
-                            <h1 class="text-4xl font-extrabold mb-2 leading-tight">PGRI Cabang Kec. Samarang</h1>
+                            <img src=logo_pgri.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
                             <h1 class="text-4xl font-extrabold mb-2 leading-tight">Smart Teacher<br><span class="text-emerald-400">Competition</span></h1>
                             <p class="text-slate-300 text-sm mb-6 uppercase tracking-widest font-semibold">Ujian Berbasis Komputer</p>
+							<p class="text-slate-300 text-sm mb-6 uppercase tracking-widest font-semibold">PGRI Cabang Kec. Samarang</p>
                             <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 mb-6 text-sm text-slate-300">
                                 <ul class="text-left space-y-2">
                                     <li><i class="fa-solid fa-clock w-5 text-emerald-400"></i> Durasi Ujian: 90 Menit</li>
