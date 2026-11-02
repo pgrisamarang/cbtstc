@@ -6,7 +6,6 @@
     <title>Smart Teacher Competition (STC) CBT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" type="image/png" href="logo_pgri.png">
     
     <!-- PWA Manifest & Meta Tags -->
     <meta name="theme-color" content="#10b981">
@@ -30,28 +29,72 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <!-- PWA Dynamic Manifest Injection & Install Prompt Handler -->
-    <!-- 1. Panggil file manifest fisik secara langsung di head -->
-<link rel="manifest" href="./manifest.json">
-
-<script>
-    // 2. Tangani event tombol instalasi PWA
-    let deferredPrompt;
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        const installBtn = document.getElementById('pwa-install-btn');
-        if(installBtn) installBtn.classList.remove('hidden');
-    });
-
-    // 3. Daftarkan Service Worker dari file fisik
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(() => console.log('PWA Service Worker terdaftar dengan sukses!'))
-                .catch((err) => console.log('Gagal mendaftarkan SW:', err));
+    <script>
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Tampilkan tombol instal jika ada elemen terkait
+            const installBtn = document.getElementById('pwa-install-btn');
+            if(installBtn) installBtn.classList.remove('hidden');
         });
-    }
-</script>
+
+        // Buat data manifest langsung dalam bentuk blob agar valid dan tidak butuh file eksternal
+        const manifestData = {
+            "name": "Smart Teacher Competition CBT",
+            "short_name": "STC CBT",
+            "start_url": window.location.href,
+            "display": "standalone",
+            "background_color": "#0f172a",
+            "theme_color": "#10b981",
+            "icons": [
+                {
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                },
+                {
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/512px-Logo_PGRI.svg.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+        const stringManifest = JSON.stringify(manifestData);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        const linkTag = document.createElement('link');
+        linkTag.rel = 'manifest';
+        linkTag.href = manifestURL;
+        document.head.appendChild(linkTag);
+
+        // Register Service Worker untuk dukungan offline & PWA cache
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', (e) => {
+                        e.waitUntil(
+                            caches.open('stc-cbt-v1').then((cache) => {
+                                return cache.addAll(['./']);
+                            })
+                        );
+                    });
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(
+                            caches.match(e.request).then((response) => {
+                                return response || fetch(e.request);
+                            })
+                        );
+                    });
+                `;
+                const swBlob = new Blob([swCode], {type: 'text/javascript'});
+                const swUrl = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swUrl)
+                    .then(() => console.log('PWA Service Worker terdaftar dengan sukses!'))
+                    .catch((err) => console.log('Gagal mendaftarkan SW:', err));
+            });
+        }
+    </script>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
@@ -134,14 +177,14 @@
 
         // --- STATE APLIKASI ---
         let state = {
-            view: 'home', // home, ujian, result, panitia_login, panitia_dash
+            view: 'home',
             pesertaNama: '',
             pesertaAsal: '',
             pesertaNPA: '',
             shuffledQuestions: [],
-            answers: {}, // format: { indexSoal: indexJawaban }
+            answers: {},
             currentQ: 0,
-            timer: 90 * 60, // 90 Menit dalam detik
+            timer: 90 * 60,
             startTime: null,
             violations: 0,
             intervalId: null,
@@ -156,7 +199,7 @@
             localStorage.removeItem('stc_cbt_state');
         }
 
-        // --- SISTEM POP-UP KUSTOM (PENGGANTI ALERT & CONFIRM) ---
+        // --- SISTEM POP-UP KUSTOM ---
         function customAlert(title, msg, type='info', callback=null) {
             const div = document.createElement('div');
             div.className = 'fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm';
@@ -239,24 +282,51 @@
 
         // --- FIREBASE: SIMPAN DAN AMBIL DATA ---
         function saveParticipantResult(res) {
-    // Buat batas waktu maksimal 7 detik
-    const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Waktu habis: Gagal terhubung ke server Firebase.")), 7000)
-    );
+            // Sistem Timeout 5 Detik Anti-Nganggur
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error("TimeoutKoneksi")), 5000);
+            });
 
-    // Gunakan Promise.race untuk mengadu cepat antara Firestore dan Timeout
-    return Promise.race([
-        db.collection("peserta_stc").doc(res.npa).set(res),
-        timeout
-    ])
-    .then(() => {
-        console.log("Data berhasil dikirim ke Cloud Firebase!");
-    })
-    .catch((error) => {
-        console.error("Error menyimpan data: ", error);
-        customAlert("Gagal Menyimpan", "Gagal menyimpan ke server (Periksa API Key atau Koneksi Internet).", "error");
-    });
-}
+            return Promise.race([
+                db.collection("peserta_stc").doc(res.npa).set(res),
+                timeoutPromise
+            ])
+            .then(() => {
+                console.log("Data berhasil dikirim ke Cloud Firebase!");
+            })
+            .catch((error) => {
+                console.error("Error menyimpan data: ", error);
+                customAlert("Koneksi Lemah", "Nilai Anda tetap aman tersimpan, namun saat ini gagal dikirim ke pusat karena jaringan. Silakan screenshot halaman hasil ujian Anda.", "warning");
+            });
+        }
+
+        async function fetchParticipants() {
+            try {
+                // Sistem Timeout 5 Detik Anti-Nganggur
+                const timeoutPromise = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error("TimeoutKoneksi")), 5000);
+                });
+
+                const snapshot = await Promise.race([
+                    db.collection("peserta_stc").get(),
+                    timeoutPromise
+                ]);
+                
+                let list = [];
+                snapshot.forEach(doc => {
+                    list.push(doc.data());
+                });
+                
+                list.sort((a, b) => {
+                    if (b.nilaiAkhir !== a.nilaiAkhir) return b.nilaiAkhir - a.nilaiAkhir;
+                    return a.durasi - b.durasi;
+                });
+                state.liveScores = list;
+            } catch (error) {
+                console.error("Gagal mengambil Live Score:", error);
+                throw error; // Lemparkan error agar ditangkap oleh panitia_login
+            }
+        }
 
         // --- ANTI CHEAT SYSTEM ---
         function handleVisibilityChange() {
@@ -376,7 +446,6 @@
             showLoading("Memproses Nilai & Menyimpan ke Cloud...");
 
             const durationSecs = Math.floor((Date.now() - state.startTime) / 1000);
-            const durationMins = Math.floor(durationSecs / 60);
 
             let correct = 0;
             state.shuffledQuestions.forEach((q, idx) => {
@@ -409,17 +478,23 @@
         async function handlePanitiaLogin() {
             const u = document.getElementById('p_user').value;
             const p = document.getElementById('p_pass').value;
+            const btn = document.getElementById('btn-login-panitia');
             
             if(u === 'admin_stc' && p === 'pgri2026') {
-                document.getElementById('btn-login-panitia').innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengambil Data...';
-                await fetchParticipants();
-                switchView('panitia_dash');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengambil Data...';
+                try {
+                    await fetchParticipants();
+                    switchView('panitia_dash');
+                } catch(e) {
+                    btn.innerHTML = 'Masuk Dashboard';
+                    customAlert('Koneksi Gagal', 'Gagal memuat data dari server. Pastikan internet stabil dan Database Firebase Anda sudah diaktifkan di Console.', 'error');
+                }
             } else {
                 customAlert('Akses Ditolak', 'Username atau Password Panitia salah.', 'error');
             }
         }
 
-        // --- PWA INSTALL HANDLER ---
+        // --- PWA INSTALL HANDLER & PANDUAN MANUAL ---
         function triggerInstallPWA() {
             if (deferredPrompt) {
                 deferredPrompt.prompt();
@@ -428,11 +503,10 @@
                         console.log('Pengguna menerima instalasi PWA');
                     }
                     deferredPrompt = null;
-                    const btn = document.getElementById('pwa-install-btn');
-                    if(btn) btn.classList.add('hidden');
                 });
             } else {
-                customAlert('Informasi Instalasi', 'Aplikasi sudah terinstal di perangkat Anda atau peramban tidak mendukung prompt otomatis. Anda juga dapat memilih menu "Tambahkan ke Layar Utama" (Add to Home Screen) pada browser Anda.', 'info');
+                // Tampilkan petunjuk manual jika browser mobile (Chrome/Safari) tidak memicu prompt otomatis
+                customAlert('Cara Install Aplikasi (PWA)', '1. Ketuk ikon titik tiga (⋮) di pojok kanan atas browser HP Anda.<br><br>2. Pilih menu <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Install Aplikasi"</strong>.<br><br>3. Konfirmasi instalasi, dan aplikasi CBT STC akan langsung terpasang di HP Anda!', 'info');
             }
         }
 
@@ -444,20 +518,19 @@
             if (state.view === 'home') {
                 app.innerHTML = `
                 <div class="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
-                    <!-- Background Design -->
                     <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
                     <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
                     
                     <div class="glass-panel max-w-4xl w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10">
                         <div class="md:w-1/2 p-10 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white text-center md:text-left">
-                            <img src="logo_pgri.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
                             <h1 class="text-4xl font-extrabold mb-2 leading-tight">Smart Teacher<br><span class="text-emerald-400">Competition</span></h1>
                             <p class="text-slate-300 text-sm mb-2 uppercase tracking-widest font-semibold">Ujian Berbasis Komputer</p>
                             <p class="text-emerald-400 text-xs mb-6 uppercase tracking-widest font-bold">PGRI Cabang Kec. Samarang</p>
                             
-                            <!-- Tombol Instal PWA -->
+                            <!-- Tombol Install PWA (Selalu Muncul & Interaktif) -->
                             <div class="mb-4">
-                                <button id="pwa-install-btn" onclick="triggerInstallPWA()" class="hidden w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl transition shadow flex items-center justify-center gap-2 text-sm">
+                                <button onclick="triggerInstallPWA()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition shadow flex items-center justify-center gap-2 text-sm">
                                     <i class="fa-solid fa-download"></i> Install Aplikasi ke HP
                                 </button>
                             </div>
@@ -590,7 +663,6 @@
                 </header>
                 
                 <main class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-6 gap-6 bg-slate-50 min-h-0">
-                    <!-- Lembar Soal -->
                     <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                             <div class="bg-slate-100 text-slate-600 font-bold px-4 py-1.5 rounded-full text-sm">SOAL NOMOR ${state.currentQ + 1} DARI ${state.shuffledQuestions.length}</div>
@@ -619,7 +691,6 @@
                         </div>
                     </div>
                     
-                    <!-- Navigasi Nomor -->
                     <div class="w-full md:w-72 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 h-fit shrink-0">
                         <h3 class="font-bold text-slate-800 mb-4">Navigasi Soal</h3>
                         <div class="grid grid-cols-5 gap-2">
@@ -685,7 +756,6 @@
             }
         }
 
-        // Inisialisasi Pertama Kali
         window.onload = function() {
             const savedState = localStorage.getItem('stc_cbt_state');
             if(savedState) {
