@@ -6,6 +6,11 @@
     <title>Smart Teacher Competition (STC) CBT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Manifest & Meta Tags -->
+    <meta name="theme-color" content="#10b981">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; }
@@ -23,8 +28,17 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
-    <!-- PWA Dynamic Manifest Injection -->
+    <!-- PWA Dynamic Manifest Injection & Install Prompt Handler -->
     <script>
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Tampilkan tombol instal jika ada elemen terkait
+            const installBtn = document.getElementById('pwa-install-btn');
+            if(installBtn) installBtn.classList.remove('hidden');
+        });
+
         const manifestData = {
             "name": "Smart Teacher Competition CBT",
             "short_name": "STC CBT",
@@ -34,12 +48,12 @@
             "theme_color": "#10b981",
             "icons": [
                 {
-                    "src": "logo_pgri.png",
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png",
                     "sizes": "192x192",
                     "type": "image/png"
                 },
                 {
-                    "src": "logo_pgri.png",
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/512px-Logo_PGRI.svg.png",
                     "sizes": "512x512",
                     "type": "image/png"
                 }
@@ -296,7 +310,7 @@
             }
         }
 
-        // --- ANTI CHEAT SYSTEM (Kini Tersimpan Secara Real-time) ---
+        // --- ANTI CHEAT SYSTEM ---
         function handleVisibilityChange() {
             if (document.hidden && state.view === 'ujian') {
                 state.violations += 1;
@@ -314,14 +328,14 @@
             clearInterval(state.intervalId);
             state.intervalId = setInterval(() => {
                 state.timer--;
-                saveLocalState(); // Simpan detik ini agar tidak hilang saat reload
+                saveLocalState();
                 
                 const m = Math.floor(state.timer / 60).toString().padStart(2, '0');
                 const s = (state.timer % 60).toString().padStart(2, '0');
                 const tEl = document.getElementById('timer-display');
                 if(tEl) {
                     tEl.innerText = `${m}:${s}`;
-                    if(state.timer <= 300) tEl.classList.add('text-red-500', 'animate-pulse'); // 5 menit terakhir
+                    if(state.timer <= 300) tEl.classList.add('text-red-500', 'animate-pulse');
                 }
                 
                 if (state.timer <= 0) {
@@ -336,7 +350,7 @@
         // --- UTILITAS UI ---
         function switchView(v) {
             state.view = v;
-            if(v === 'home') clearLocalState(); // Bersihkan memori lokal jika kembali ke beranda
+            if(v === 'home') clearLocalState();
             saveLocalState();
             render();
         }
@@ -368,19 +382,17 @@
                 return;
             }
 
-            // Bersihkan sesi lama agar peserta baru mendapat lembar soal bersih
             clearLocalState();
 
             state.pesertaNama = nama;
             state.pesertaAsal = asal;
             state.pesertaNPA = npa;
             state.startTime = Date.now();
-            state.answers = {}; // Kosongkan jawaban
-            state.violations = 0; // Reset pelanggaran
-            state.timer = 90 * 60; // Reset timer 90 menit penuh
+            state.answers = {};
+            state.violations = 0;
+            state.timer = 90 * 60;
             state.currentQ = 0;
             
-            // Acak Soal
             let shuffled = [...bankSoal].sort(() => 0.5 - Math.random());
             state.shuffledQuestions = shuffled;
             
@@ -418,15 +430,13 @@
             const durationSecs = Math.floor((Date.now() - state.startTime) / 1000);
             const durationMins = Math.floor(durationSecs / 60);
 
-            // Hitung Skor
             let correct = 0;
             state.shuffledQuestions.forEach((q, idx) => {
                 if(state.answers[idx] === q.answer) correct++;
             });
 
-            // Bobot maksimal 100 untuk 50 soal
             let baseScore = (correct / state.shuffledQuestions.length) * 100;
-            let finalScore = baseScore - (state.violations * 1); // Penalti 1% per violation
+            let finalScore = baseScore - (state.violations * 1);
             if (finalScore < 0) finalScore = 0;
 
             const resultData = {
@@ -461,6 +471,23 @@
             }
         }
 
+        // --- PWA INSTALL HANDLER ---
+        function triggerInstallPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('Pengguna menerima instalasi PWA');
+                    }
+                    deferredPrompt = null;
+                    const btn = document.getElementById('pwa-install-btn');
+                    if(btn) btn.classList.add('hidden');
+                });
+            } else {
+                customAlert('Informasi Instalasi', 'Aplikasi sudah terinstal di perangkat Anda atau peramban tidak mendukung prompt otomatis. Anda juga dapat memilih menu "Tambahkan ke Layar Utama" (Add to Home Screen) pada browser Anda.', 'info');
+            }
+        }
+
         // --- RENDER UI ---
         function render() {
             const app = document.getElementById('app');
@@ -475,10 +502,18 @@
                     
                     <div class="glass-panel max-w-4xl w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10">
                         <div class="md:w-1/2 p-10 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white text-center md:text-left">
-                            <img src="logo_pgri.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
                             <h1 class="text-4xl font-extrabold mb-2 leading-tight">Smart Teacher<br><span class="text-emerald-400">Competition</span></h1>
-                            <p class="text-slate-300 text-sm mb-6 uppercase tracking-widest font-semibold">Ujian Berbasis Komputer</p>
-							<p class="text-slate-300 text-sm mb-6 uppercase tracking-widest font-semibold">PGRI Cabang Kec. Samarang</p>
+                            <p class="text-slate-300 text-sm mb-2 uppercase tracking-widest font-semibold">Ujian Berbasis Komputer</p>
+                            <p class="text-emerald-400 text-xs mb-6 uppercase tracking-widest font-bold">PGRI Cabang Kec. Samarang</p>
+                            
+                            <!-- Tombol Instal PWA -->
+                            <div class="mb-4">
+                                <button id="pwa-install-btn" onclick="triggerInstallPWA()" class="hidden w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-xl transition shadow flex items-center justify-center gap-2 text-sm">
+                                    <i class="fa-solid fa-download"></i> Install Aplikasi ke HP
+                                </button>
+                            </div>
+
                             <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 mb-6 text-sm text-slate-300">
                                 <ul class="text-left space-y-2">
                                     <li><i class="fa-solid fa-clock w-5 text-emerald-400"></i> Durasi Ujian: 90 Menit</li>
@@ -704,7 +739,6 @@
 
         // Inisialisasi Pertama Kali
         window.onload = function() {
-            // Coba pulihkan sesi (kebal reload)
             const savedState = localStorage.getItem('stc_cbt_state');
             if(savedState) {
                 try {
@@ -717,7 +751,6 @@
 
             render();
 
-            // Lanjutkan fungsi krusial berdasarkan halaman saat direload
             if(state.view === 'ujian') {
                 startTimer();
                 initAntiCheat();
