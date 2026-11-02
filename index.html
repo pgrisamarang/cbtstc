@@ -29,71 +29,28 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 
     <!-- PWA Dynamic Manifest Injection & Install Prompt Handler -->
-    <script>
-        let deferredPrompt;
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            // Tampilkan tombol instal jika ada elemen terkait
-            const installBtn = document.getElementById('pwa-install-btn');
-            if(installBtn) installBtn.classList.remove('hidden');
+    <!-- 1. Panggil file manifest fisik secara langsung di head -->
+<link rel="manifest" href="./manifest.json">
+
+<script>
+    // 2. Tangani event tombol instalasi PWA
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        const installBtn = document.getElementById('pwa-install-btn');
+        if(installBtn) installBtn.classList.remove('hidden');
+    });
+
+    // 3. Daftarkan Service Worker dari file fisik
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(() => console.log('PWA Service Worker terdaftar dengan sukses!'))
+                .catch((err) => console.log('Gagal mendaftarkan SW:', err));
         });
-
-        const manifestData = {
-            "name": "Smart Teacher Competition CBT",
-            "short_name": "STC CBT",
-            "start_url": "./",
-            "display": "standalone",
-            "background_color": "#0f172a",
-            "theme_color": "#10b981",
-            "icons": [
-                {
-                    "src": "logo_pgri.png",
-                    "sizes": "192x192",
-                    "type": "image/png"
-                },
-                {
-                    "src": "logo_pgri.png",
-                    "sizes": "512x512",
-                    "type": "image/png"
-                }
-            ]
-        };
-        const stringManifest = JSON.stringify(manifestData);
-        const blob = new Blob([stringManifest], {type: 'application/json'});
-        const manifestURL = URL.createObjectURL(blob);
-        const linkTag = document.createElement('link');
-        linkTag.rel = 'manifest';
-        linkTag.href = manifestURL;
-        document.head.appendChild(linkTag);
-
-        // Register Service Worker untuk dukungan offline & PWA cache
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                const swCode = `
-                    self.addEventListener('install', (e) => {
-                        e.waitUntil(
-                            caches.open('stc-cbt-v1').then((cache) => {
-                                return cache.addAll(['./']);
-                            })
-                        );
-                    });
-                    self.addEventListener('fetch', (e) => {
-                        e.respondWith(
-                            caches.match(e.request).then((response) => {
-                                return response || fetch(e.request);
-                            })
-                        );
-                    });
-                `;
-                const swBlob = new Blob([swCode], {type: 'text/javascript'});
-                const swUrl = URL.createObjectURL(swBlob);
-                navigator.serviceWorker.register(swUrl)
-                    .then(() => console.log('PWA Service Worker terdaftar dengan sukses!'))
-                    .catch((err) => console.log('Gagal mendaftarkan SW:', err));
-            });
-        }
-    </script>
+    }
+</script>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
