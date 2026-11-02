@@ -9,7 +9,7 @@
     
     <!-- PWA Manifest & Meta Tags -->
     <meta name="theme-color" content="#10b981">
-    <link rel="logo_pgri.png">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png">
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -32,10 +32,20 @@
     <script>
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
+            // Mencegah prompt bawaan muncul otomatis
             e.preventDefault();
+            // Simpan event sehingga bisa dipicu nanti
             deferredPrompt = e;
-            const installBtn = document.getElementById('pwa-install-btn');
-            if(installBtn) installBtn.classList.remove('hidden');
+            // Tampilkan tombol install kita
+            const installBtnContainer = document.getElementById('pwa-install-container');
+            if(installBtnContainer) installBtnContainer.classList.remove('hidden');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            // Sembunyikan tombol jika sudah berhasil diinstal
+            deferredPrompt = null;
+            const installBtnContainer = document.getElementById('pwa-install-container');
+            if(installBtnContainer) installBtnContainer.classList.add('hidden');
         });
 
         const manifestData = {
@@ -47,12 +57,12 @@
             "theme_color": "#10b981",
             "icons": [
                 {
-                    "src": "logo_pgri.png",
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png",
                     "sizes": "192x192",
                     "type": "image/png"
                 },
                 {
-                    "src": "logo_pgri.png",
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/512px-Logo_PGRI.svg.png",
                     "sizes": "512x512",
                     "type": "image/png"
                 }
@@ -69,18 +79,27 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 const swCode = `
+                    const CACHE_NAME = 'stc-cbt-v2';
                     self.addEventListener('install', (e) => {
+                        self.skipWaiting();
                         e.waitUntil(
-                            caches.open('stc-cbt-v1').then((cache) => {
+                            caches.open(CACHE_NAME).then((cache) => {
                                 return cache.addAll(['./']);
+                            })
+                        );
+                    });
+                    self.addEventListener('activate', (e) => {
+                        e.waitUntil(
+                            caches.keys().then((keyList) => {
+                                return Promise.all(keyList.map((key) => {
+                                    if (key !== CACHE_NAME) return caches.delete(key);
+                                }));
                             })
                         );
                     });
                     self.addEventListener('fetch', (e) => {
                         e.respondWith(
-                            caches.match(e.request).then((response) => {
-                                return response || fetch(e.request);
-                            })
+                            fetch(e.request).catch(() => caches.match(e.request))
                         );
                     });
                 `;
@@ -490,12 +509,18 @@
         // --- PWA INSTALL HANDLER ---
         function triggerInstallPWA() {
             if (deferredPrompt) {
+                // Tampilkan pop-up instalasi bawaan HP
                 deferredPrompt.prompt();
+                // Tunggu respons user
                 deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User menerima instalasi PWA');
+                    }
                     deferredPrompt = null;
+                    // Sembunyikan tombol setelah ditekan
+                    const container = document.getElementById('pwa-install-container');
+                    if(container) container.classList.add('hidden');
                 });
-            } else {
-                customAlert('Cara Install Aplikasi (PWA)', '1. Ketuk ikon titik tiga (⋮) di pojok kanan atas browser HP Anda.<br><br>2. Pilih menu <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Install Aplikasi"</strong>.<br><br>3. Konfirmasi instalasi, dan aplikasi CBT STC akan langsung terpasang di HP Anda!', 'info');
             }
         }
 
@@ -512,12 +537,13 @@
                     
                     <div class="glass-panel max-w-4xl w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10">
                         <div class="md:w-1/2 p-10 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white text-center md:text-left">
-                            <img src="logo_pgri.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
                             <h1 class="text-4xl font-extrabold mb-2 leading-tight">Smart Teacher<br><span class="text-emerald-400">Competition</span></h1>
                             <p class="text-slate-300 text-sm mb-2 uppercase tracking-widest font-semibold">Ujian Berbasis Komputer</p>
                             <p class="text-emerald-400 text-xs mb-6 uppercase tracking-widest font-bold">PGRI Cabang Kec. Samarang</p>
                             
-                            <div class="mb-4">
+                            <!-- Tombol Install disembunyikan secara default, hanya muncul jika HP siap -->
+                            <div class="${deferredPrompt ? '' : 'hidden'} mb-4" id="pwa-install-container">
                                 <button onclick="triggerInstallPWA()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition shadow flex items-center justify-center gap-2 text-sm">
                                     <i class="fa-solid fa-download"></i> Install Aplikasi ke HP
                                 </button>
@@ -537,7 +563,7 @@
                             <div class="space-y-4 mb-8">
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nama Lengkap</label>
-                                    <input type="text" id="inp_nama" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="Contoh : Uus Kusaeri">
+                                    <input type="text" id="inp_nama" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="Masukkan nama Anda">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Asal Sekolah</label>
@@ -545,7 +571,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Nomor Pokok Anggota (NPA)</label>
-                                    <input type="number" id="inp_npa" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="Masukkan NPA Anda">
+                                    <input type="number" id="inp_npa" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition" placeholder="Masukkan 10 digit NPA">
                                 </div>
                             </div>
                             <button onclick="startExam()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/30 flex justify-center items-center gap-2 text-lg">
