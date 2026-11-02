@@ -239,34 +239,24 @@
 
         // --- FIREBASE: SIMPAN DAN AMBIL DATA ---
         function saveParticipantResult(res) {
-            return db.collection("peserta_stc").doc(res.npa).set(res)
-                .then(() => {
-                    console.log("Data berhasil dikirim ke Cloud Firebase!");
-                })
-                .catch((error) => {
-                    console.error("Error menyimpan data: ", error);
-                    customAlert("Koneksi Error", "Koneksi terputus! Data disimpan secara luring sementara.", "error");
-                });
-        }
+    // Buat batas waktu maksimal 7 detik
+    const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Waktu habis: Gagal terhubung ke server Firebase.")), 7000)
+    );
 
-        async function fetchParticipants() {
-            try {
-                const snapshot = await db.collection("peserta_stc").get();
-                let list = [];
-                snapshot.forEach(doc => {
-                    list.push(doc.data());
-                });
-                
-                // Tie-breaker: Jika nilai sama, urutkan berdasarkan durasi tercepat
-                list.sort((a, b) => {
-                    if (b.nilaiAkhir !== a.nilaiAkhir) return b.nilaiAkhir - a.nilaiAkhir;
-                    return a.durasi - b.durasi;
-                });
-                state.liveScores = list;
-            } catch (error) {
-                console.error("Gagal mengambil Live Score:", error);
-            }
-        }
+    // Gunakan Promise.race untuk mengadu cepat antara Firestore dan Timeout
+    return Promise.race([
+        db.collection("peserta_stc").doc(res.npa).set(res),
+        timeout
+    ])
+    .then(() => {
+        console.log("Data berhasil dikirim ke Cloud Firebase!");
+    })
+    .catch((error) => {
+        console.error("Error menyimpan data: ", error);
+        customAlert("Gagal Menyimpan", "Gagal menyimpan ke server (Periksa API Key atau Koneksi Internet).", "error");
+    });
+}
 
         // --- ANTI CHEAT SYSTEM ---
         function handleVisibilityChange() {
