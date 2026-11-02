@@ -42,7 +42,7 @@
         const db = firebase.firestore();
 
         // --- DATA SOAL STC (Berdasarkan Kisi-Kisi) ---
-        const bankSoal = [
+         const bankSoal = [
             // AD/ART (40% - 20 Soal)
             { id: 1, cat: "AD/ART", text: "Organisasi PGRI merupakan kelanjutan dari Persatuan Guru Hindia Belanda (PGHB) yang didirikan pada tahun...", options: ["1908", "1912", "1928", "1945"], answer: 1 },
             { id: 2, cat: "AD/ART", text: "Sifat organisasi PGRI yang bermakna tidak memandang perbedaan tempat kerja, agama, dan asal-usul adalah...", options: ["Independen", "Nonpartisan", "Unitaristik", "Profesional"], answer: 2 },
@@ -310,10 +310,17 @@
                 return;
             }
 
+            // Bersihkan sesi lama agar peserta baru mendapat lembar soal bersih
+            clearLocalState();
+
             state.pesertaNama = nama;
             state.pesertaAsal = asal;
             state.pesertaNPA = npa;
             state.startTime = Date.now();
+            state.answers = {}; // Kosongkan jawaban
+            state.violations = 0; // Reset pelanggaran
+            state.timer = 90 * 60; // Reset timer 90 menit penuh
+            state.currentQ = 0;
             
             // Acak Soal
             let shuffled = [...bankSoal].sort(() => 0.5 - Math.random());
