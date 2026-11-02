@@ -30,16 +30,15 @@
     <!-- SCRIPT LOGIC -->
     <script>
         // --- INISIALISASI FIREBASE ---
-        // TODO: Ganti blok firebaseConfig di bawah ini dengan yang Anda copy dari Firebase Console!
         const firebaseConfig = {
-          apiKey: "AIzaSyC_2pCRdFGfWivtP27ynr-cjf8S0ius6pI",
-          authDomain: "stc-pgri-cbt.firebaseapp.com",
-          projectId: "stc-pgri-cbt",
-          storageBucket: "stc-pgri-cbt.firebasestorage.app",
-          messagingSenderId: "1003836044382",
-          appId: "1:1003836044382:web:b6598f722e1954972ef0cf",
-          measurementId: "G-L7BFL0RY2L"
-            };
+            apiKey: "AIzaSyC_2pCRdFGfWivtP27ynr-cjf8S0ius6pI",
+            authDomain: "stc-pgri-cbt.firebaseapp.com",
+            projectId: "stc-pgri-cbt",
+            storageBucket: "stc-pgri-cbt.firebasestorage.app",
+            messagingSenderId: "1003836044382",
+            appId: "1:1003836044382:web:b6598f722e1954972ef0cf",
+            measurementId: "G-L7BFL0RY2L"
+        };
         
         // Inisialisasi Firebase App & Firestore
         if (!firebase.apps.length) {
@@ -367,10 +366,33 @@
             return sorted;
         }
 
+        // TAMPILKAN/SEMBUNYIKAN LOADING OVERLAY DENGAN AMAN
+        function showLoading(msg) {
+            hideLoading(); // pastikan tidak ada overlay ganda
+            const div = document.createElement('div');
+            div.id = 'loading-overlay';
+            div.className = 'fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center text-white flex-col backdrop-blur-sm';
+            div.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-5xl text-emerald-500 mb-4"></i><p class="font-semibold">${msg}</p>`;
+            document.body.appendChild(div);
+        }
+
+        function hideLoading() {
+            const el = document.getElementById('loading-overlay');
+            if(el) el.remove();
+        }
+
+        // Fungsi fetch data manual untuk persiapan Dashboard
+        function fetchParticipants() {
+            return db.collection("peserta_stc").get().then((snapshot) => {
+                liveParticipants = [];
+                snapshot.forEach(doc => liveParticipants.push(doc.data()));
+            }).catch(e => console.error(e));
+        }
+
         function saveParticipantResult(res) {
             // Simpan langsung ke Cloud Firestore. 
             // Menggunakan NPA sebagai ID Dokumen agar data tertimpa jika NPA sama ujian 2 kali
-            db.collection("peserta_stc").doc(res.npa).set(res)
+            return db.collection("peserta_stc").doc(res.npa).set(res)
                 .then(() => {
                     console.log("Data berhasil dikirim ke Cloud Firebase!");
                 })
@@ -473,14 +495,28 @@
         // --- DASHBOARD PANITIA & LIVE SCORE ---
         function renderPanitiaDashboard() {
             // Panggil trigger firebase
-            getRegisteredParticipants();
+            const list = getRegisteredParticipants();
+            
+            // Generate Baris Tabel HTML
+            const trs = list.length === 0 ? `<tr><td colspan="7" class="p-8 text-center text-slate-500">Belum ada peserta yang menyelesaikan ujian...</td></tr>` : 
+            list.map((p, i) => `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-100 last:border-0">
+                    <td class="p-4 font-bold text-slate-400">#${i+1}</td>
+                    <td class="p-4 font-bold text-slate-800">${p.nama}</td>
+                    <td class="p-4 text-slate-600">${p.asal}</td>
+                    <td class="p-4 text-slate-600 font-mono text-xs">${p.npa}</td>
+                    <td class="p-4 text-red-500 font-semibold">${p.pelanggaran} Kali</td>
+                    <td class="p-4 text-slate-600">${p.waktu}</td>
+                    <td class="p-4 text-center font-black text-amber-500 text-lg">${p.nilai}</td>
+                </tr>
+            `).join('');
 
             return `
                 <div class="flex-1 flex flex-col bg-slate-100">
                     <header class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md">
                         <div class="flex items-center gap-3">
                             <div class="bg-amber-500 text-slate-950 px-3 py-1 rounded-lg font-bold text-sm">PANITIA STC</div>
-                            <h1 class="font-bold text-lg">Live Score & Monitoring Peserta</h1>
+                            <h1 class="font-bold text-lg hidden sm:block">Live Score & Monitoring</h1>
                         </div>
                         <button onclick="switchView('home')" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm transition"><i class="fa-solid fa-right-from-bracket mr-2"></i> Keluar</button>
                     </header>
@@ -489,7 +525,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                                 <p class="text-xs text-slate-500 font-semibold uppercase">Total Peserta Selesai</p>
-                                <h3 id="total-peserta-count" class="text-3xl font-bold text-slate-800 mt-1">...</h3>
+                                <h3 id="total-peserta-count" class="text-3xl font-bold text-slate-800 mt-1">${list.length} Orang</h3>
                             </div>
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                                 <p class="text-xs text-slate-500 font-semibold uppercase">Durasi Ujian Maksimal</p>
@@ -526,7 +562,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="table-body-peserta" class="divide-y divide-slate-100 text-sm">
-                                        <!-- Data tabel di-render dinamis oleh Firebase -->
+                                        ${trs}
                                     </tbody>
                                 </table>
                             </div>
@@ -845,11 +881,12 @@
                 status: "Selesai"
             };
 
-            // Menampilkan loading state sebentar
-            document.body.innerHTML += `<div id="loading-overlay" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center text-white flex-col"><i class="fa-solid fa-spinner fa-spin text-4xl text-emerald-500 mb-4"></i><p>Menyimpan data ujian Anda ke server...</p></div>`;
+            // Menampilkan loading state sebentar secara aman
+            showLoading("Menyimpan data ujian Anda ke server Cloud...");
 
             await saveParticipantResult(state.scoreData);
             
+            hideLoading();
             state.view = 'hasil';
             render();
         }
@@ -902,8 +939,9 @@
         }
 
         async function goToDashboardFromHasil() {
-            document.body.innerHTML += `<div id="loading-overlay" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center text-white flex-col"><i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-500 mb-4"></i><p>Memuat Live Score...</p></div>`;
+            showLoading("Memuat Data Live Score...");
             await fetchParticipants();
+            hideLoading();
             switchView('panitia_dash');
         }
 
