@@ -6,6 +6,11 @@
     <title>Smart Teacher Competition (STC) CBT</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Manifest & Meta Tags -->
+    <meta name="theme-color" content="#10b981">
+    <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png">
+    
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #0f172a; }
@@ -19,9 +24,72 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs (Versi 8.10.1 Paling Stabil) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <!-- PWA Dynamic Manifest Injection & Install Prompt Handler -->
+    <script>
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            const installBtn = document.getElementById('pwa-install-btn');
+            if(installBtn) installBtn.classList.remove('hidden');
+        });
+
+        const manifestData = {
+            "name": "Smart Teacher Competition CBT",
+            "short_name": "STC CBT",
+            "start_url": window.location.href,
+            "display": "standalone",
+            "background_color": "#0f172a",
+            "theme_color": "#10b981",
+            "icons": [
+                {
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png",
+                    "sizes": "192x192",
+                    "type": "image/png"
+                },
+                {
+                    "src": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/512px-Logo_PGRI.svg.png",
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+        const stringManifest = JSON.stringify(manifestData);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        const linkTag = document.createElement('link');
+        linkTag.rel = 'manifest';
+        linkTag.href = manifestURL;
+        document.head.appendChild(linkTag);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', (e) => {
+                        e.waitUntil(
+                            caches.open('stc-cbt-v1').then((cache) => {
+                                return cache.addAll(['./']);
+                            })
+                        );
+                    });
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(
+                            caches.match(e.request).then((response) => {
+                                return response || fetch(e.request);
+                            })
+                        );
+                    });
+                `;
+                const swBlob = new Blob([swCode], {type: 'text/javascript'});
+                const swUrl = URL.createObjectURL(swBlob);
+                navigator.serviceWorker.register(swUrl).catch(() => {});
+            });
+        }
+    </script>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
@@ -38,57 +106,86 @@
           appId: "1:1003836044382:web:b6598f722e1954972ef0cf",
           measurementId: "G-L7BFL0RY2L"
         };
-        firebase.initializeApp(firebaseConfig);
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.firestore();
 
-        // --- DATA SOAL STC (Berdasarkan Kisi-Kisi) ---
+        // --- DATA SOAL STC (50 Soal Lengkap) ---
         const bankSoal = [
-            // AD/ART (40%)
             { id: 1, cat: "AD/ART", text: "Organisasi PGRI merupakan kelanjutan dari Persatuan Guru Hindia Belanda (PGHB) yang didirikan pada tahun...", options: ["1908", "1912", "1928", "1945"], answer: 1 },
             { id: 2, cat: "AD/ART", text: "Sifat organisasi PGRI yang bermakna tidak memandang perbedaan tempat kerja, agama, dan asal-usul adalah...", options: ["Independen", "Nonpartisan", "Unitaristik", "Profesional"], answer: 2 },
             { id: 3, cat: "AD/ART", text: "Kepengurusan PGRI tingkat nasional berkedudukan di...", options: ["Ibu kota provinsi", "Ibu kota negara", "Setiap kabupaten/kota", "Kantor kementerian"], answer: 1 },
             { id: 4, cat: "AD/ART", text: "Makna warna putih pada dasar lambang (Panji) PGRI melambangkan...", options: ["Keberanian", "Kesucian/Ketulusan", "Pengabdian", "Kesejahteraan"], answer: 1 },
             { id: 5, cat: "AD/ART", text: "Forum tertinggi dalam menentukan kedaulatan organisasi PGRI adalah...", options: ["Konferensi Kerja Nasional", "Rapat Pimpinan Nasional", "Kongres", "Rapat Pleno"], answer: 2 },
             { id: 6, cat: "AD/ART", text: "Visi PGRI adalah mewujudkan organisasi yang...", options: ["Populer dan menguntungkan", "Terpercaya, dinamis, kuat, dan bermartabat", "Bersifat politis", "Setara dengan partai"], answer: 1 },
-            { id: 7, cat: "AD/ART", text: "Masa bakti kepengurusan badan pimpinan organisasi PGRI ditetapkan selama...", options: ["3 tahun", "4 tahun", "5 tahun", "6 tahun"], answer: 2 },
-            { id: 8, cat: "AD/ART", text: "Badan Khusus PGRI yang berfokus pada pengembangan pembelajaran cerdas dan karakter adalah...", options: ["BPLP", "LKBH", "PSLCC", "APKS"], answer: 2 },
-            
-            // HARDWARE (20%)
-            { id: 9, cat: "Hardware", text: "Perangkat yang berfungsi memancarkan sinyal Wi-Fi di area kelas agar Papan Interaktif Digital (PID) dapat terhubung ke internet adalah...", options: ["Switch", "Router/Access Point", "Hub", "LAN Card"], answer: 1 },
-            { id: 10, cat: "Hardware", text: "Keunggulan utama Solid State Drive (SSD) dibandingkan Harddisk (HDD) adalah...", options: ["Harga per GB lebih murah", "Kecepatan baca/tulis data jauh lebih cepat", "Menggunakan piringan magnetik", "Lebih mudah rusak"], answer: 1 },
-            { id: 11, cat: "Hardware", text: "Port yang paling umum digunakan untuk menghubungkan Papan Interaktif Digital (PID) ke laptop adalah...", options: ["VGA atau HDMI", "PS/2", "RJ-11", "Audio Jack 3.5mm"], answer: 0 },
-            { id: 12, cat: "Hardware", text: "Cara paling tepat untuk mematikan perangkat Papan Interaktif Digital (PID) agar awet adalah...", options: ["Mencabut langsung kabel power", "Menekan tombol power dari sistem (Shut down)", "Membiarkan menyala 24 jam", "Mereset paksa setiap hari"], answer: 1 },
+            { id: 7, cat: "AD/ART", text: "Berikut ini yang bukan merupakan perangkat kelengkapan organisasi PGRI adalah...", options: ["Dewan Pembina", "Dewan Kehormatan Guru Indonesia (DKGI)", "Lembaga Swadaya Masyarakat", "Perempuan PGRI"], answer: 2 },
+            { id: 8, cat: "AD/ART", text: "Masa bakti kepengurusan badan pimpinan organisasi PGRI ditetapkan selama...", options: ["3 tahun", "4 tahun", "5 tahun", "6 tahun"], answer: 2 },
+            { id: 9, cat: "AD/ART", text: "Salah satu fungsi PGRI adalah...", options: ["Mencari keuntungan materiil", "Memajukan profesi pendidik", "Mengatur mutasi guru", "Mengangkat ASN"], answer: 1 },
+            { id: 10, cat: "AD/ART", text: "Siapa yang berhak menjadi anggota biasa PGRI?", options: ["Semua warga negara", "Guru, dosen, dan tenaga kependidikan", "Pelajar dan mahasiswa", "Pejabat pemerintah"], answer: 1 },
+            { id: 11, cat: "AD/ART", text: "Lembaga Konsultasi dan Bantuan Hukum (LKBH) PGRI dibentuk untuk memberikan kewenangan organisasi dalam hal...", options: ["Sertifikasi guru", "Pembelaan hukum bagi anggota", "Pengumpulan iuran", "Pemilihan ketua"], answer: 1 },
+            { id: 12, cat: "AD/ART", text: "Keuangan organisasi PGRI tidak bersumber dari...", options: ["Uang pangkal", "Uang iuran", "APBN/APBD secara mutlak", "Sumbangan donatur yang tidak mengikat"], answer: 2 },
+            { id: 13, cat: "AD/ART", text: "Untuk merubah Anggaran Dasar PGRI, forum yang memiliki wewenang adalah...", options: ["Konkernas", "Kongres", "Konprov", "Rapimnas"], answer: 1 },
+            { id: 14, cat: "AD/ART", text: "Kewajiban seorang anggota PGRI adalah, kecuali...", options: ["Mematuhi AD/ART", "Melaksanakan program aktif", "Menjunjung kode etik", "Mengabaikan iuran"], answer: 3 },
+            { id: 15, cat: "AD/ART", text: "Badan Khusus PGRI yang berfokus pada pengembangan pembelajaran cerdas dan karakter adalah...", options: ["BPLP", "LKBH", "PSLCC", "APKS"], answer: 2 },
+            { id: 16, cat: "AD/ART", text: "Hak setiap anggota untuk membela diri diatur dalam...", options: ["Hak suara", "Hak bicara", "Hak dipilih", "Hak membela diri"], answer: 3 },
+            { id: 17, cat: "AD/ART", text: "PGRI didirikan pada Kongres Guru Indonesia di Surakarta pada tanggal...", options: ["17 Agustus 1945", "25 November 1945", "1 Januari 1912", "20 Mei 1908"], answer: 1 },
+            { id: 18, cat: "AD/ART", text: "Jati diri PGRI mencakup tiga hal, yaitu organisasi profesi, ketenagakerjaan, dan...", options: ["Perjuangan", "Politik", "Sosial", "Kemanusiaan"], answer: 0 },
+            { id: 19, cat: "AD/ART", text: "Susunan organisasi tingkat cabang meliputi wilayah...", options: ["Provinsi", "Kabupaten", "Kecamatan", "Desa/Sekolah"], answer: 2 },
+            { id: 20, cat: "AD/ART", text: "Atribut organisasi PGRI meliputi Lambang, Panji, Mars, Hymne, dan...", options: ["Topi", "Sepatu", "Pakaian Seragam", "Kendaraan dinas"], answer: 2 },
 
-            // SOFTWARE (20%)
-            { id: 13, cat: "Software", text: "Sistem operasi yang dikembangkan oleh Google dan sering digunakan pada Chromebook adalah...", options: ["Windows 11", "macOS", "ChromeOS", "Linux Ubuntu"], answer: 2 },
-            { id: 14, cat: "Software", text: "Aplikasi pembelajaran interaktif berbasis kuis yang memungkinkan siswa menjawab menggunakan gawai mereka secara real-time adalah...", options: ["Microsoft Word", "Kahoot! / Quizizz", "Adobe Photoshop", "VLC Media Player"], answer: 1 },
-            { id: 15, cat: "Software", text: "Tipe ekstensi file yang menunjukkan dokumen tersebut adalah bahan ajar berformat Portable Document Format adalah...", options: [".docx", ".xlsx", ".pdf", ".pptx"], answer: 2 },
-            { id: 16, cat: "Software", text: "Fitur 'Share' atau 'Bagikan' pada Google Drive dengan akses 'Viewer' berarti...", options: ["Penerima dapat mengedit file", "Penerima dapat menghapus file", "Penerima hanya dapat melihat/membaca file", "Penerima menjadi pemilik file"], answer: 2 },
+            { id: 21, cat: "Hardware", text: "[Stimulus] Papan ketik, mouse, dan scanner. Kelompok perangkat keras tersebut tergolong dalam kategori...", options: ["Output Device", "Input Device", "Processing Device", "Storage Device"], answer: 1 },
+            { id: 22, cat: "Hardware", text: "Port yang paling umum digunakan untuk menghubungkan Papan Interaktif Digital (PID) ke laptop adalah...", options: ["VGA atau HDMI", "PS/2", "RJ-11", "Audio Jack 3.5mm"], answer: 0 },
+            { id: 23, cat: "Hardware", text: "Keunggulan utama Solid State Drive (SSD) dibandingkan Harddisk (HDD) adalah...", options: ["Harga per GB lebih murah", "Kecepatan baca/tulis data jauh lebih cepat", "Menggunakan piringan magnetik", "Lebih mudah rusak jika terjatuh"], answer: 1 },
+            { id: 24, cat: "Hardware", text: "Perangkat jaringan yang berfungsi memancarkan sinyal Wi-Fi di area kelas agar PID dapat terhubung ke internet adalah...", options: ["Switch", "Router/Access Point", "Hub", "LAN Card"], answer: 1 },
+            { id: 25, cat: "Hardware", text: "Proyektor yang tampilannya redup atau berbintik umumnya disebabkan oleh...", options: ["RAM penuh", "Lampu proyektor (bulb) yang mulai melemah/kotor", "Harddisk rusak", "Sistem operasi belum di-update"], answer: 1 },
+            { id: 26, cat: "Hardware", text: "Media penyimpanan optik yang sudah jarang digunakan namun masih sering ditemukan di komputer lama adalah...", options: ["Flashdisk", "SSD", "CD/DVD-ROM", "MicroSD"], answer: 2 },
+            { id: 27, cat: "Hardware", text: "Cara paling tepat untuk mematikan perangkat Papan Interaktif Digital (PID) agar awet adalah...", options: ["Mencabut langsung kabel power", "Menekan tombol power di sistem/menu Shut down lalu menunggu hingga mati total", "Membiarkan menyala 24 jam", "Menyiram dengan air"], answer: 1 },
+            { id: 28, cat: "Hardware", text: "Perangkat yang berfungsi menghasilkan cetakan fisik dari dokumen digital pada komputer adalah...", options: ["Scanner", "Printer", "Speaker", "Monitor"], answer: 1 },
+            { id: 29, cat: "Hardware", text: "Kabel UTP dengan konektor RJ-45 digunakan untuk...", options: ["Mentransmisikan suara ke speaker", "Menghubungkan komputer ke jaringan LAN/Internet", "Menyalurkan daya listrik", "Menampilkan video ke proyektor"], answer: 1 },
+            { id: 30, cat: "Hardware", text: "RAM (Random Access Memory) berfungsi sebagai...", options: ["Penyimpanan data permanen", "Penyimpanan data sementara saat aplikasi berjalan", "Pemroses grafis", "Alat input data"], answer: 1 },
 
-            // DIGITALISASI (20%)
-            { id: 17, cat: "Digitalisasi", text: "Ekosistem utama yang dikembangkan Kemendikbudristek sebagai wadah bagi guru untuk belajar, berkarya, dan mengajar adalah...", options: ["Platform Merdeka Mengajar (PMM)", "Ruang Guru", "Zenius", "PeduliLindungi"], answer: 0 },
-            { id: 18, cat: "Digitalisasi", text: "Konsep pembelajaran yang melibatkan pemanfaatan sumber digital untuk membuat siswa aktif berkolaborasi dan berpikir kritis disebut...", options: ["Pembelajaran konvensional", "Pembelajaran Berpusat pada Murid berbasis digital", "Pembelajaran satu arah", "Pembelajaran pasif"], answer: 1 },
-            { id: 19, cat: "Digitalisasi", text: "Kemampuan guru untuk menemukan, mengevaluasi, menggunakan, dan membuat informasi menggunakan teknologi digital disebut...", options: ["Literasi Digital", "Literasi Finansial", "Literasi Sains", "Numerasi"], answer: 0 },
-            { id: 20, cat: "Digitalisasi", text: "Ikon gembok pada address bar peramban web menandakan bahwa situs pendidikan yang sedang diakses...", options: ["Sedang di-hack", "Memiliki koneksi aman (HTTPS) terenkripsi", "Komputer terkena virus", "Tidak membutuhkan kuota internet"], answer: 1 }
+            { id: 31, cat: "Software", text: "Sistem operasi yang dikembangkan oleh Google dan sering digunakan pada Chromebook adalah...", options: ["Windows 11", "macOS", "ChromeOS", "Linux Ubuntu"], answer: 2 },
+            { id: 32, cat: "Software", text: "Microsoft PowerPoint, Canva, dan Google Slides memiliki fungsi utama untuk...", options: ["Mengolah angka", "Membuat desain presentasi", "Mengedit video", "Menulis bahasa pemrograman"], answer: 1 },
+            { id: 33, cat: "Software", text: "Aplikasi pembelajaran interaktif berbasis kuis yang memungkinkan siswa menjawab menggunakan gawai mereka secara real-time adalah...", options: ["Microsoft Word", "Kahoot! / Quizizz", "Adobe Photoshop", "VLC Media Player"], answer: 1 },
+            { id: 34, cat: "Software", text: "Agar sistem terhindar dari malware saat membuka bahan ajar dari flashdisk luar, langkah pengamanan yang harus dilakukan adalah...", options: ["Menonaktifkan Windows Defender", "Melakukan pemindaian (scanning) dengan Antivirus", "Menghapus semua file", "Melakukan format harddisk"], answer: 1 },
+            { id: 35, cat: "Software", text: "Tipe ekstensi file yang menunjukkan dokumen tersebut adalah bahan ajar berformat Portable Document Format adalah...", options: [".docx", ".xlsx", ".pdf", ".pptx"], answer: 2 },
+            { id: 36, cat: "Software", text: "Aplikasi pengolah nilai berbasis spreadsheet menggunakan simbol ini untuk memulai sebuah rumus matematika...", options: ["+", "=", "*", "/"], answer: 1 },
+            { id: 37, cat: "Software", text: "Untuk mengintegrasikan video YouTube ke dalam Google Slides, fitur yang dipilih pada menu adalah...", options: ["Insert > Image", "Insert > Video", "File > Download", "Format > Text"], answer: 1 },
+            { id: 38, cat: "Software", text: "Password yang kuat untuk keamanan akun platform digital guru sebaiknya terdiri dari...", options: ["Kombinasi huruf besar, kecil, angka, dan simbol", "Tanggal lahir saja", "Nama hewan peliharaan", "Angka berurutan 123456"], answer: 0 },
+            { id: 39, cat: "Software", text: "Fitur 'Share' atau 'Bagikan' pada Google Drive dengan akses 'Viewer' berarti...", options: ["Penerima tautan dapat mengedit file", "Penerima tautan dapat menghapus file", "Penerima tautan hanya dapat melihat/membaca file", "Penerima menjadi pemilik file"], answer: 2 },
+            { id: 40, cat: "Software", text: "Aplikasi browser (peramban) yang paling umum digunakan untuk mengakses Platform Merdeka Mengajar (PMM) di PC adalah...", options: ["Google Chrome", "Microsoft Excel", "Adobe Reader", "WinRAR"], answer: 0 },
+
+            { id: 41, cat: "Digitalisasi", text: "Pemanfaatan layar interaktif berukuran besar di depan kelas termasuk dalam kebijakan digitalisasi untuk alat...", options: ["Mesin TIK konvensional", "Papan Interaktif Digital (PID) / Interactive Flat Panel", "Proyektor OHP", "Papan tulis kapur"], answer: 1 },
+            { id: 42, cat: "Digitalisasi", text: "Ekosistem utama yang dikembangkan Kemendikbudristek sebagai wadah bagi guru untuk belajar, berkarya, dan mengajar adalah...", options: ["Platform Merdeka Mengajar (PMM)", "Ruang Guru", "Zenius", "PeduliLindungi"], answer: 0 },
+            { id: 43, cat: "Digitalisasi", text: "Akun resmi yang diberikan pemerintah untuk mengakses berbagai layanan pendidikan digital secara terintegrasi adalah...", options: ["Akun Google biasa (@gmail.com)", "Akun belajar.id", "Akun Yahoo", "Akun iCloud"], answer: 1 },
+            { id: 44, cat: "Digitalisasi", text: "Konsep pembelajaran yang melibatkan pemanfaatan sumber digital untuk membuat siswa aktif berkolaborasi dan berpikir kritis disebut...", options: ["Pembelajaran konvensional", "Pembelajaran Berpusat pada Murid berbasis digital", "Pembelajaran satu arah (Teacher-Centered)", "Pembelajaran pasif"], answer: 1 },
+            { id: 45, cat: "Digitalisasi", text: "Sikap yang mencerminkan etika digital (digital ethics) yang baik bagi seorang pendidik adalah...", options: ["Menyebarkan berita hoaks", "Menghargai hak cipta karya digital orang lain", "Memberikan password dapodik secara bebas", "Menggunakan bahasa kasar di medsos"], answer: 1 },
+            { id: 46, cat: "Digitalisasi", text: "Kemampuan guru untuk menemukan, mengevaluasi, menggunakan, dan membuat informasi menggunakan teknologi digital disebut...", options: ["Literasi Digital", "Literasi Finansial", "Literasi Sains", "Numerasi"], answer: 0 },
+            { id: 47, cat: "Digitalisasi", text: "Jika sekolah belum memiliki koneksi internet yang stabil, solusi alternatif dalam digitalisasi pembelajaran adalah...", options: ["Tidak menggunakan teknologi sama sekali", "Menggunakan perangkat dan aplikasi luring (offline-first)", "Memulangkan siswa", "Menyuruh siswa belajar di warnet"], answer: 1 },
+            { id: 48, cat: "Digitalisasi", text: "Evaluasi efektivitas digitalisasi pembelajaran dapat dilihat dari indikator...", options: ["Peningkatan jumlah gawai yang rusak", "Peningkatan keterlibatan, motivasi, dan pemahaman konsep murid", "Menurunnya interaksi guru dan murid", "Bertambahnya tugas administratif manual"], answer: 1 },
+            { id: 49, cat: "Digitalisasi", text: "Aplikasi Rapor Pendidikan digunakan oleh satuan pendidikan untuk...", options: ["Menginput nilai ulangan harian siswa", "Melihat potret kualitas pendidikan dan merencanakan perbaikan", "Membayar gaji guru", "Mengabsen siswa setiap hari"], answer: 1 },
+            { id: 50, cat: "Digitalisasi", text: "Ikon kunci gembok pada address bar peramban web menandakan bahwa situs web pendidikan yang sedang diakses...", options: ["Sedang di-hack", "Memiliki koneksi aman (HTTPS) terenkripsi", "Komputer terkena virus", "Tidak membutuhkan kuota internet"], answer: 1 }
         ];
 
         // --- STATE APLIKASI ---
         let state = {
-            view: 'home', // home, ujian, result, panitia_login, panitia_dash
+            view: 'home',
             pesertaNama: '',
             pesertaAsal: '',
             pesertaNPA: '',
             shuffledQuestions: [],
-            answers: {}, // format: { indexSoal: indexJawaban }
+            answers: {},
             currentQ: 0,
-            timer: 90 * 60, // 90 Menit dalam detik
+            timer: 90 * 60,
             startTime: null,
             violations: 0,
             intervalId: null,
             liveScores: []
         };
 
-        // --- SISTEM PENYIMPANAN SESI (KEBAL RELOAD) ---
+        // --- SISTEM PENYIMPANAN SESI ---
         function saveLocalState() {
             localStorage.setItem('stc_cbt_state', JSON.stringify(state));
         }
@@ -96,7 +193,7 @@
             localStorage.removeItem('stc_cbt_state');
         }
 
-        // --- SISTEM POP-UP KUSTOM (PENGGANTI ALERT & CONFIRM) ---
+        // --- SISTEM POP-UP KUSTOM ---
         function customAlert(title, msg, type='info', callback=null) {
             const div = document.createElement('div');
             div.className = 'fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm';
@@ -159,34 +256,35 @@
             };
         }
 
-        function executeResetDatabase() {
+        async function executeResetDatabase() {
             showLoading("Mereset Data Server...");
-            db.collection("peserta_stc").get().then((snapshot) => {
+            try {
+                const snapshot = await db.collection("peserta_stc").get();
                 const batch = db.batch();
                 snapshot.docs.forEach((doc) => {
                     batch.delete(doc.ref);
                 });
-                return batch.commit();
-            }).then(() => {
+                await batch.commit();
                 hideLoading();
                 customAlert("Berhasil", "Seluruh data perlombaan telah direset menjadi nol.", "info");
-                fetchParticipants();
-            }).catch((e) => {
+                await fetchParticipants();
+                render();
+            } catch (e) {
                 hideLoading();
                 customAlert("Error", "Gagal mereset data: " + e.message, "error");
-            });
+            }
         }
 
-        // --- FIREBASE: SIMPAN DAN AMBIL DATA ---
-        function saveParticipantResult(res) {
-            return db.collection("peserta_stc").doc(res.npa).set(res)
-                .then(() => {
-                    console.log("Data berhasil dikirim ke Cloud Firebase!");
-                })
-                .catch((error) => {
-                    console.error("Error menyimpan data: ", error);
-                    customAlert("Koneksi Error", "Koneksi terputus! Data disimpan secara luring sementara.", "error");
-                });
+        // --- FIREBASE: SIMPAN & AMBIL DATA (ROBUST & FAST) ---
+        async function saveParticipantResult(res) {
+            try {
+                await db.collection("peserta_stc").doc(res.npa.toString()).set(res);
+                console.log("Data berhasil disimpan ke Cloud Firestore!");
+                return true;
+            } catch (error) {
+                console.error("Gagal menyimpan ke Firestore:", error);
+                throw error;
+            }
         }
 
         async function fetchParticipants() {
@@ -197,7 +295,6 @@
                     list.push(doc.data());
                 });
                 
-                // Tie-breaker: Jika nilai sama, urutkan berdasarkan durasi tercepat
                 list.sort((a, b) => {
                     if (b.nilaiAkhir !== a.nilaiAkhir) return b.nilaiAkhir - a.nilaiAkhir;
                     return a.durasi - b.durasi;
@@ -205,10 +302,11 @@
                 state.liveScores = list;
             } catch (error) {
                 console.error("Gagal mengambil Live Score:", error);
+                throw error;
             }
         }
 
-        // --- ANTI CHEAT SYSTEM (Kini Tersimpan Secara Real-time) ---
+        // --- ANTI CHEAT SYSTEM ---
         function handleVisibilityChange() {
             if (document.hidden && state.view === 'ujian') {
                 state.violations += 1;
@@ -226,14 +324,14 @@
             clearInterval(state.intervalId);
             state.intervalId = setInterval(() => {
                 state.timer--;
-                saveLocalState(); // Simpan detik ini agar tidak hilang saat reload
+                saveLocalState();
                 
                 const m = Math.floor(state.timer / 60).toString().padStart(2, '0');
                 const s = (state.timer % 60).toString().padStart(2, '0');
                 const tEl = document.getElementById('timer-display');
                 if(tEl) {
                     tEl.innerText = `${m}:${s}`;
-                    if(state.timer <= 300) tEl.classList.add('text-red-500', 'animate-pulse'); // 5 menit terakhir
+                    if(state.timer <= 300) tEl.classList.add('text-red-500', 'animate-pulse');
                 }
                 
                 if (state.timer <= 0) {
@@ -248,7 +346,7 @@
         // --- UTILITAS UI ---
         function switchView(v) {
             state.view = v;
-            if(v === 'home') clearLocalState(); // Bersihkan memori lokal jika kembali ke beranda
+            if(v === 'home') clearLocalState();
             saveLocalState();
             render();
         }
@@ -280,12 +378,17 @@
                 return;
             }
 
+            clearLocalState();
+
             state.pesertaNama = nama;
             state.pesertaAsal = asal;
             state.pesertaNPA = npa;
             state.startTime = Date.now();
+            state.answers = {};
+            state.violations = 0;
+            state.timer = 90 * 60;
+            state.currentQ = 0;
             
-            // Acak Soal
             let shuffled = [...bankSoal].sort(() => 0.5 - Math.random());
             state.shuffledQuestions = shuffled;
             
@@ -314,24 +417,21 @@
             }
         }
 
-        function finishExam() {
+        async function finishExam() {
             clearInterval(state.intervalId);
             document.removeEventListener("visibilitychange", handleVisibilityChange);
             
             showLoading("Memproses Nilai & Menyimpan ke Cloud...");
 
             const durationSecs = Math.floor((Date.now() - state.startTime) / 1000);
-            const durationMins = Math.floor(durationSecs / 60);
 
-            // Hitung Skor
             let correct = 0;
             state.shuffledQuestions.forEach((q, idx) => {
                 if(state.answers[idx] === q.answer) correct++;
             });
 
-            // Bobot maksimal 100 untuk 50 soal (ini sampel ada 20 soal, kita anggap total bobot 100)
             let baseScore = (correct / state.shuffledQuestions.length) * 100;
-            let finalScore = baseScore - (state.violations * 1); // Penalti 1% per violation
+            let finalScore = baseScore - (state.violations * 1);
             if (finalScore < 0) finalScore = 0;
 
             const resultData = {
@@ -346,23 +446,47 @@
                 waktuSelesai: new Date().toISOString()
             };
 
-            saveParticipantResult(resultData).then(() => {
+            try {
+                await saveParticipantResult(resultData);
                 hideLoading();
                 switchView('result');
-            });
+            } catch (e) {
+                hideLoading();
+                customAlert("Gagal Menyimpan ke Cloud", "Koneksi ke Firebase gagal. Nilai tetap tercatat lokal. Silakan lapor panitia.", "error", () => {
+                    switchView('result');
+                });
+            }
         }
 
         // --- PANITIA ---
         async function handlePanitiaLogin() {
             const u = document.getElementById('p_user').value;
             const p = document.getElementById('p_pass').value;
+            const btn = document.getElementById('btn-login-panitia');
             
             if(u === 'admin_stc' && p === 'pgri2026') {
-                document.getElementById('btn-login-panitia').innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengambil Data...';
-                await fetchParticipants();
-                switchView('panitia_dash');
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengambil Data...';
+                try {
+                    await fetchParticipants();
+                    switchView('panitia_dash');
+                } catch(e) {
+                    btn.innerHTML = 'Masuk Dashboard';
+                    customAlert('Koneksi Gagal', 'Gagal memuat data dari server. Periksa aturan keamanan Firestore (Pastikan aturan dalam mode allow read, write if true).', 'error');
+                }
             } else {
                 customAlert('Akses Ditolak', 'Username atau Password Panitia salah.', 'error');
+            }
+        }
+
+        // --- PWA INSTALL HANDLER ---
+        function triggerInstallPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    deferredPrompt = null;
+                });
+            } else {
+                customAlert('Cara Install Aplikasi (PWA)', '1. Ketuk ikon titik tiga (⋮) di pojok kanan atas browser HP Anda.<br><br>2. Pilih menu <strong>"Tambahkan ke Layar Utama"</strong> atau <strong>"Install Aplikasi"</strong>.<br><br>3. Konfirmasi instalasi, dan aplikasi CBT STC akan langsung terpasang di HP Anda!', 'info');
             }
         }
 
@@ -374,15 +498,22 @@
             if (state.view === 'home') {
                 app.innerHTML = `
                 <div class="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
-                    <!-- Background Design -->
                     <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
                     <div class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-emerald-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"></div>
                     
                     <div class="glass-panel max-w-4xl w-full rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative z-10">
                         <div class="md:w-1/2 p-10 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-slate-800 text-white text-center md:text-left">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/1200px-Logo_PGRI.svg.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Logo_PGRI.svg/192px-Logo_PGRI.svg.png" class="w-24 h-24 mx-auto md:mx-0 mb-6 drop-shadow-lg" alt="PGRI Logo">
                             <h1 class="text-4xl font-extrabold mb-2 leading-tight">Smart Teacher<br><span class="text-emerald-400">Competition</span></h1>
-                            <p class="text-slate-300 text-sm mb-6 uppercase tracking-widest font-semibold">Ujian Berbasis Komputer</p>
+                            <p class="text-slate-300 text-sm mb-2 uppercase tracking-widest font-semibold">Ujian Berbasis Komputer</p>
+                            <p class="text-emerald-400 text-xs mb-6 uppercase tracking-widest font-bold">PGRI Cabang Kec. Samarang</p>
+                            
+                            <div class="mb-4">
+                                <button onclick="triggerInstallPWA()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition shadow flex items-center justify-center gap-2 text-sm">
+                                    <i class="fa-solid fa-download"></i> Install Aplikasi ke HP
+                                </button>
+                            </div>
+
                             <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50 mb-6 text-sm text-slate-300">
                                 <ul class="text-left space-y-2">
                                     <li><i class="fa-solid fa-clock w-5 text-emerald-400"></i> Durasi Ujian: 90 Menit</li>
@@ -428,11 +559,11 @@
                         <div class="space-y-4 mb-6">
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Username Panitia</label>
-                                <input type="text" id="p_user" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500">
+                                <input type="text" id="p_user" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500" value="admin_stc">
                             </div>
                             <div>
                                 <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Password</label>
-                                <input type="password" id="p_pass" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500">
+                                <input type="password" id="p_pass" class="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-amber-500" value="pgri2026">
                             </div>
                         </div>
                         <button id="btn-login-panitia" onclick="handlePanitiaLogin()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold py-3.5 rounded-xl transition">Masuk Dashboard</button>
@@ -456,7 +587,7 @@
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                                 <h2 class="text-xl font-bold text-slate-800">Klasemen Sementara</h2>
-                                <button onclick="fetchParticipants().then(()=>render())" class="text-slate-500 hover:text-emerald-600 bg-white border border-slate-200 px-3 py-1 rounded-lg text-sm"><i class="fa-solid fa-rotate-right mr-1"></i> Segarkan</button>
+                                <button onclick="showLoading('Memuat ulang data...'); fetchParticipants().then(()=>{hideLoading(); render();}).catch(()=>{hideLoading(); customAlert('Error', 'Gagal memuat data', 'error');})" class="text-slate-500 hover:text-emerald-600 bg-white border border-slate-200 px-3 py-1 rounded-lg text-sm"><i class="fa-solid fa-rotate-right mr-1"></i> Segarkan</button>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse">
@@ -511,7 +642,6 @@
                 </header>
                 
                 <main class="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-6 gap-6 bg-slate-50 min-h-0">
-                    <!-- Lembar Soal -->
                     <div class="flex-1 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                         <div class="p-6 border-b border-slate-100 flex justify-between items-center">
                             <div class="bg-slate-100 text-slate-600 font-bold px-4 py-1.5 rounded-full text-sm">SOAL NOMOR ${state.currentQ + 1} DARI ${state.shuffledQuestions.length}</div>
@@ -540,7 +670,6 @@
                         </div>
                     </div>
                     
-                    <!-- Navigasi Nomor -->
                     <div class="w-full md:w-72 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 h-fit shrink-0">
                         <h3 class="font-bold text-slate-800 mb-4">Navigasi Soal</h3>
                         <div class="grid grid-cols-5 gap-2">
@@ -606,9 +735,7 @@
             }
         }
 
-        // Inisialisasi Pertama Kali
         window.onload = function() {
-            // Coba pulihkan sesi (kebal reload)
             const savedState = localStorage.getItem('stc_cbt_state');
             if(savedState) {
                 try {
@@ -621,12 +748,11 @@
 
             render();
 
-            // Lanjutkan fungsi krusial berdasarkan halaman saat direload
             if(state.view === 'ujian') {
                 startTimer();
                 initAntiCheat();
             } else if (state.view === 'panitia_dash') {
-                fetchParticipants().then(() => render());
+                fetchParticipants().then(() => render()).catch(() => {});
             }
         };
     </script>
