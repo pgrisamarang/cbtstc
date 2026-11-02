@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Teacher Competition (STC) - CBT Online</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter & Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="flex-1 flex flex-col"></div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        // --- BANK SOAL LENGKAP 50 SOAL SESUAI KISI-KISI STC ---
+        const BANK_SOAL = [
+            // BAGIAN 1: AD/ART PGRI (20 Soal - 40%)
+            {
+                id: 1, cat: "AD/ART", 
+                q: "Organisasi PGRI merupakan kelanjutan dari Persatuan Guru Hindia Belanda (PGHB) yang didirikan pada tahun...",
+                options: ["1908", "1912", "1928", "1945"], ans: 1, img: null
+            },
+            {
+                id: 2, cat: "AD/ART", 
+                q: "Sifat organisasi PGRI yang bermakna tidak memandang perbedaan tempat kerja, agama, suku, golongan, gender, dan asal-usul adalah...",
+                options: ["Independen", "Nonpartisan", "Unitaristik/Inklusif", "Profesional"], ans: 2, img: null
+            },
+            {
+                id: 3, cat: "AD/ART", 
+                q: "Kepengurusan PGRI tingkat nasional berkedudukan di...",
+                options: ["Ibu kota provinsi", "Ibu kota negara Republik Indonesia", "Setiap kabupaten/kota", "Kantor kementerian"], ans: 1, img: null
+            },
+            {
+                id: 4, cat: "AD/ART", 
+                q: "Makna warna putih pada dasar lambang (Panji) PGRI melambangkan...",
+                options: ["Keberanian dalam berjuang", "Kesucian dan ketulusan pengabdian", "Kesejahteraan anggota", "Kemandirian organisasi"], ans: 1, 
+                img: "https://placehold.co/400x200/2563eb/ffffff?text=Logo+dan+Panji+PGRI"
+            },
+            {
+                id: 5, cat: "AD/ART", 
+                q: "Forum tertinggi dalam menentukan kedaulatan organisasi PGRI adalah...",
+                options: ["Konferensi Kerja Nasional", "Rapat Pimpinan Nasional", "Kongres", "Rapat Pleno Pengurus Besar"], ans: 2, img: null
+            },
+            {
+                id: 6, cat: "AD/ART", 
+                q: "Visi PGRI adalah terwujudnya PGRI sebagai organisasi profesi yang...",
+                options: ["Populer dan mencari laba", "Terpercaya, dinamis, kuat, dan bermartabat", "Bersifat politis dan independen", "Setara dengan partai politik"], ans: 1, img: null
+            },
+            {
+                id: 7, cat: "AD/ART", 
+                q: "Berikut ini yang bukan merupakan perangkat kelengkapan organisasi PGRI adalah...",
+                options: ["Dewan Pembina", "Dewan Kehormatan Guru Indonesia (DKGI)", "Lembaga Swadaya Masyarakat (LSM) Independen", "Perempuan PGRI"], ans: 2, img: null
+            },
+            {
+                id: 8, cat: "AD/ART", 
+                q: "Masa bakti kepengurusan badan pimpinan organisasi PGRI ditetapkan selama...",
+                options: ["3 (tiga) tahun", "4 (empat) tahun", "5 (lima) tahun", "6 (enam) tahun"], ans: 2, img: null
+            },
+            {
+                id: 9, cat: "AD/ART", 
+                q: "Salah satu fungsi utama PGRI adalah...",
+                options: ["Mencari keuntungan materiil anggota", "Memajukan profesi guru, dosen, pendidik, dan tenaga kependidikan", "Mengatur mutasi dan penempatan ASN", "Mengangkat pejabat fungsional"], ans: 1, img: null
+            },
+            {
+                id: 10, cat: "AD/ART", 
+                q: "Siapa sajakah yang berhak menjadi anggota biasa PGRI?",
+                options: ["Semua warga negara Indonesia tanpa terkecuali", "Guru, dosen, pendidik, dan tenaga kependidikan", "Pelajar sekolah dan mahasiswa", "Pejabat instansi pemerintah daerah"], ans: 1, 
+                img: "https://placehold.co/400x200/0ea5e9/ffffff?text=Ilustrasi+Keanggotaan+KTA+Digital"
+            },
+            {
+                id: 11, cat: "AD/ART", 
+                q: "Lembaga Konsultasi dan Bantuan Hukum (LKBH) PGRI dibentuk untuk memberikan kewenangan organisasi dalam hal...",
+                options: ["Sertifikasi pendidik", "Memberikan bantuan dan perlindungan hukum bagi anggota", "Pengumpulan iuran wajib bulanan", "Pemilihan pengurus cabang"], ans: 1, img: null
+            },
+            {
+                id: 12, cat: "AD/ART", 
+                q: "Keuangan organisasi PGRI tidak bersumber dari...",
+                options: ["Uang pangkal dan uang iuran anggota", "Sumbangan tetap para donatur", "APBN atau APBD secara mutlak dan mengikat", "Usaha lain yang sah"], ans: 2, img: null
+            },
+            {
+                id: 13, cat: "AD/ART", 
+                q: "Untuk mengubah Anggaran Dasar PGRI, forum resmi yang memiliki wewenang penuh adalah...",
+                options: ["Konferensi Kerja Nasional (Konkernas)", "Kongres", "Konferensi Provinsi", "Rapat Pimpinan Nasional"], ans: 1, img: null
+            },
+            {
+                id: 14, cat: "AD/ART", 
+                q: "Kewajiban seorang anggota PGRI adalah sebagai berikut, kecuali...",
+                options: ["Menjunjung tinggi kehormatan organisasi dan Kode Etik", "Mematuhi AD/ART serta disiplin organisasi", "Melaksanakan program organisasi secara aktif", "Mengabaikan pembayaran iuran organisasi"], ans: 3, img: null
+            },
+            {
+                id: 15, cat: "AD/ART", 
+                q: "Badan Khusus PGRI yang berfokus pada pelatihan pembelajaran cerdas berbasis digital dan karakter adalah...",
+                options: ["BPLP", "LKBH", "PGRI Smart Learning and Character Center (PSLCC)", "APKS"], ans: 2, img: null
+            },
+            {
+                id: 16, cat: "AD/ART", 
+                q: "Hak setiap anggota untuk membela diri terhadap keputusan organisasi diatur dalam kelompok...",
+                options: ["Hak suara", "Hak bicara", "Hak dipilih", "Hak membela diri"], ans: 3, img: null
+            },
+            {
+                id: 17, cat: "AD/ART", 
+                q: "PGRI didirikan pada Kongres Guru Indonesia di Surakarta pada tanggal dan tahun...",
+                options: ["17 Agustus 1945", "25 November 1945", "1 Januari 1912", "20 Mei 1908"], ans: 1, img: null
+            },
+            {
+                id: 18, cat: "AD/ART", 
+                q: "Jati diri PGRI secara utuh adalah sebagai organisasi profesi, ketenagakerjaan, dan...",
+                options: ["Perjuangan", "Politik praktis", "Sosial murni", "Kemanusiaan internasional"], ans: 0, img: null
+            },
+            {
+                id: 19, cat: "AD/ART", 
+                q: "Susunan organisasi PGRI tingkat cabang meliputi wilayah kerja seluas...",
+                options: ["Satu provinsi", "Satu kabupaten/kota", "Satu kecamatan atau satu unit kerja tertentu", "Satu desa atau kelurahan"], ans: 2, img: null
+            },
+            {
+                id: 20, cat: "AD/ART", 
+                q: "Atribut resmi organisasi PGRI meliputi Lambang, Panji, Pakaian Seragam, Mars, Hymne, serta...",
+                options: ["Atribut khusus lainnya yang diatur ART", "Topi khusus pengurus", "Kendaraan dinas organisasi", "Lencana emas wajib"], ans: 0, img: null
+            },
+
+            // BAGIAN 2: HARDWARE KOMPUTER (10 Soal - 20%)
+            {
+                id: 21, cat: "Hardware", 
+                q: "Papan ketik (keyboard), tetikus (mouse), dan pemindai (scanner) termasuk ke dalam perangkat keras kelompok...",
+                options: ["Output Device", "Input Device", "Processing Device", "Storage Device"], ans: 1, 
+                img: "https://placehold.co/400x200/10b981/ffffff?text=Perangkat+Input+Komputer"
+            },
+            {
+                id: 22, cat: "Hardware", 
+                q: "Port kabel standar yang paling umum digunakan untuk menghubungkan Papan Interaktif Digital (PID) ke laptop guru adalah...",
+                options: ["VGA atau HDMI", "PS/2 Port", "RJ-11 Telephone Jack", "Audio Jack 3.5mm"], ans: 0, img: null
+            },
+            {
+                id: 23, cat: "Hardware", 
+                q: "Keunggulan utama Solid State Drive (SSD) dibandingkan Hard Disk Drive (HDD) konvensional adalah...",
+                options: ["Harga per kapasitas gigabyte jauh lebih murah", "Kecepatan baca dan tulis data jauh lebih tinggi serta tahan guncangan", "Menggunakan piringan magnetik mekanik", "Konsumsi daya listrik lebih besar"], ans: 1, 
+                img: "https://placehold.co/400x200/f59e0b/ffffff?text=SSD+vs+HDD"
+            },
+            {
+                id: 24, cat: "Hardware", 
+                q: "Perangkat keras jaringan yang berfungsi memancarkan sinyal Wi-Fi di dalam kelas agar Papan Interaktif terhubung internet adalah...",
+                options: ["Switch Hub", "Router / Access Point", "LAN Card", "Modulator Demodulator"], ans: 1, img: null
+            },
+            {
+                id: 25, cat: "Hardware", 
+                q: "Proyektor kelas yang tampilannya mendadak redup atau muncul bintik hitam biasanya disebabkan oleh...",
+                options: ["RAM komputer penuh", "Lampu proyektor (bulb) kotor/mulai melemah atau kendala optik", "Harddisk mengalami bad sector", "Sistem operasi belum diperbarui"], ans: 1, img: null
+            },
+            {
+                id: 26, cat: "Hardware", 
+                q: "Media penyimpanan optik piringan portabel yang dulunya sering digunakan untuk menyimpan master software atau video pembelajaran adalah...",
+                options: ["Flashdisk USB", "SSD Eksternal", "CD/DVD-ROM", "MicroSD Card"], ans: 2, img: null
+            },
+            {
+                id: 27, cat: "Hardware", 
+                q: "Prosedur paling tepat saat mematikan perangkat Papan Interaktif Digital (PID) agar komponen elektroniknya awet adalah...",
+                options: ["Langsung mencabut kabel power dari stopkontak dinding", "Mematikan lewat tombol shutdown sistem operasi lalu pastikan saklar dimatikan", "Membiarkan menyala terus selama 24 jam", "Menyiram layar dengan cairan pembersih saat menyala"], ans: 1, img: null
+            },
+            {
+                id: 28, cat: "Hardware", 
+                q: "Perangkat keras output yang berfungsi menghasilkan salinan fisik berupa cetakan di atas kertas adalah...",
+                options: ["Scanner", "Printer", "Speaker aktif", "Monitor LED"], ans: 1, img: null
+            },
+            {
+                id: 29, cat: "Hardware", 
+                q: "Kabel UTP dengan kepala konektor RJ-45 secara umum digunakan untuk kebutuhan...",
+                options: ["Menyalurkan gelombang suara ke speaker", "Menghubungkan perangkat ke jaringan lokal LAN/Internet", "Menyalurkan tegangan tinggi AC", "Menghubungkan mouse nirkabel"], ans: 1, img: null
+            },
+            {
+                id: 30, cat: "Hardware", 
+                q: "Fungsi utama dari RAM (Random Access Memory) di dalam spesifikasi komputer adalah...",
+                options: ["Menyimpan data secara permanen meski komputer dimatikan", "Menyimpan data instruksi sementara saat aplikasi dan program sedang berjalan", "Memproses grafis 3 dimensi secara mandiri", "Menjadi tempat instalasi sistem operasi utama"], ans: 1, img: null
+            },
+
+            // BAGIAN 3: SOFTWARE KOMPUTER (10 Soal - 20%)
+            {
+                id: 31, cat: "Software", 
+                q: "Sistem operasi berbasis ringan buatan Google yang sering dibagikan dalam program bantuan perangkat sekolah disebut...",
+                options: ["Windows 11 Pro", "macOS Sonoma", "ChromeOS", "Ubuntu Server"], ans: 2, img: null
+            },
+            {
+                id: 32, cat: "Software", 
+                q: "Aplikasi perkantoran digital seperti Microsoft PowerPoint, Canva, dan Google Slides berfungsi utama untuk...",
+                options: ["Mengolah angka dan tabel akuntansi", "Membuat media presentasi dan bahan ajar interaktif", "Mengedit video sinematik", "Membuat bahasa pemrograman"], ans: 1, 
+                img: "https://placehold.co/400x200/8b5cf6/ffffff?text=Aplikasi+Presentasi+Digital"
+            },
+            {
+                id: 33, cat: "Software", 
+                q: "Platform aplikasi pembelajaran interaktif berbasis kuis daring yang populer digunakan guru di kelas adalah...",
+                options: ["Microsoft Word", "Kahoot! / Quizizz", "Adobe Photoshop", "VLC Media Player"], ans: 1, img: null
+            },
+            {
+                id: 34, cat: "Software", 
+                q: "Tindakan pengamanan perangkat lunak yang wajib dilakukan saat menerima flashdisk asing dari luar sekolah sebelum dibuka adalah...",
+                options: ["Langsung menghapus semua isinya", "Melakukan pemindaian (scanning) menggunakan Antivirus / Windows Defender", "Memformat ulang flashdisk", "Menonaktifkan sistem keamanan komputer"], ans: 1, img: null
+            },
+            {
+                id: 35, cat: "Software", 
+                q: "Format ekstensi file digital yang paling aman dibagikan sebagai modul ajar karena tidak mudah berubah tata letaknya adalah...",
+                options: [".docx", ".xlsx", ".pdf", ".pptx"], ans: 2, img: null
+            },
+            {
+                id: 36, cat: "Software", 
+                q: "Dalam aplikasi lembar kerja digital (Spreadsheet), simbol karakter apa yang harus diketikkan pertama kali untuk menuliskan rumus?",
+                options: ["+", "=", "*", "/"], ans: 1, img: null
+            },
+            {
+                id: 37, cat: "Software", 
+                q: "Cara paling mudah menyisipkan video pembelajaran dari YouTube ke dalam materi Google Slides adalah melalui menu...",
+                options: ["Insert > Video", "File > Download As", "Format > Word Art", "Tools > Spelling"], ans: 0, img: null
+            },
+            {
+                id: 38, cat: "Software", 
+                q: "Karakteristik pembuatan kata sandi (password) akun digital guru yang baik dan aman adalah...",
+                options: ["Menggunakan tanggal lahir pribadi agar mudah diingat", "Kombinasi huruf besar, huruf kecil, angka, dan simbol khusus", "Menggunakan nama hewan peliharaan", "Menggunakan urutan angka 123456"], ans: 1, img: null
+            },
+            {
+                id: 39, cat: "Software", 
+                q: "Saat membagikan link Google Drive modul ajar dengan hak akses 'Viewer', artinya rekan guru lain...",
+                options: ["Dapat mengedit dan menghapus isi file", "Hanya dapat melihat dan mengunduh file tanpa bisa mengubah", "Menjadi pemilik bersama file tersebut", "Tidak diizinkan membuka file sama sekali"], ans: 1, img: null
+            },
+            {
+                id: 40, cat: "Software", 
+                q: "Aplikasi penjelajah web (browser) standar yang dianjurkan untuk mengakses layanan platform GTK Kemendikbudristek adalah...",
+                options: ["Google Chrome / Microsoft Edge", "Adobe Acrobat Reader", "WinRAR Archiver", "Notepad++"], ans: 0, img: null
+            },
+
+            // BAGIAN 4: DIGITALISASI PEMBELAJARAN (10 Soal - 20%)
+            {
+                id: 41, cat: "Digitalisasi", 
+                q: "Pemanfaatan layar sentuh interaktif berukuran besar di ruang kelas modern dikenal dengan istilah...",
+                options: ["Mesin ketik elektrik", "Papan Interaktif Digital (PID) / Interactive Flat Panel", "Proyektor OHP transparan", "Whiteboard konvensional"], ans: 1, 
+                img: "https://placehold.co/400x200/ec4899/ffffff?text=Papan+Interaktif+Digital+(PID)"
+            },
+            {
+                id: 42, cat: "Digitalisasi", 
+                q: "Ekosistem digital utama dari kementerian untuk guru belajar, berbagi perangkat ajar, dan meningkatkan kompetensi adalah...",
+                options: ["Platform Merdeka Mengajar (PMM)", "Ruang Belajar Komersial", "Portal Toko Daring", "Aplikasi Chatting Sekolah"], ans: 0, img: null
+            },
+            {
+                id: 43, cat: "Digitalisasi", 
+                q: "Akun tunggal layanan digital berdomain belajar.id diberikan kepada pendidik dan satuan pendidikan dengan tujuan...",
+                options: ["Memudahkan akses layanan pembelajaran digital terintegrasi", "Digunakan untuk belanja online pribadi", "Sebagai syarat membuat akun media sosial komersial", "Menggantikan kartu identitas penduduk"], ans: 0, img: null
+            },
+            {
+                id: 44, cat: "Digitalisasi", 
+                q: "Prinsip utama digitalisasi pembelajaran adalah berpusat pada murid (student-centered), yang artinya...",
+                options: ["Guru mendominasi penjelasan materi di depan kelas", "Murid aktif mengeksplorasi pengetahuan menggunakan perangkat digital secara kolaboratif", "Pembelajaran hanya berfokus pada hafalan buku teks", "Siswa dibebaskan tanpa bimbingan guru"], ans: 1, img: null
+            },
+            {
+                id: 45, cat: "Digitalisasi", 
+                q: "Contoh penerapan etika digital (digital ethics) yang benar bagi seorang pendidik profesional adalah...",
+                options: ["Menyebarkan informasi yang belum pasti kebenarannya di grup wali murid", "Menghargai hak cipta intelektual karya digital orang lain saat menyusun bahan ajar", "Membagikan password Dapodik sekolah ke sembarang orang", "Menggunakan bahasa sarkas di kolom komentar platform pendidikan"], ans: 1, img: null
+            },
+            {
+                id: 46, cat: "Digitalisasi", 
+                q: "Kecakapan guru dalam mencari, mengevaluasi, menggunakan, dan memproduksi konten digital secara bijak disebut...",
+                options: ["Literasi Digital", "Literasi Finansial", "Literasi Sains Dasar", "Kalkulasi Numerasi"], ans: 0, img: null
+            },
+            {
+                id: 47, cat: "Digitalisasi", 
+                q: "Jika satuan pendidikan berada di wilayah dengan akses internet terbatas, solusi alternatif digitalisasi pembelajaran yang tepat adalah...",
+                options: ["Menghentikan seluruh pemanfaatan teknologi", "Menggunakan pendekatan luring berbasis server lokal / media pembelajaran offline", "Memulangkan siswa setiap hari", "Menyuruh siswa mencari sinyal di luar kota"], ans: 1, img: null
+            },
+            {
+                id: 48, cat: "Digitalisasi", 
+                q: "Indikator utama keberhasilan evaluasi efektivitas digitalisasi pembelajaran di sekolah dapat dilihat dari...",
+                options: ["Banyaknya perangkat gawai yang rusak di laboratorium", "Peningkatan keterlibatan, motivasi, dan pemahaman konsep belajar murid", "Semakin tingginya beban administrasi cetak kertas", "Berkurangnya interaksi sosial di sekolah"], ans: 1, img: null
+            },
+            {
+                id: 49, cat: "Digitalisasi", 
+                q: "Aplikasi Rapor Pendidikan bagi satuan pendidikan dimanfaatkan untuk...",
+                options: ["Menginput absensi harian manual siswa", "Melihat data evaluasi mutu layanan satuan pendidikan sebagai dasar perencanaan perbaikan berbasis data", "Merekap nilai rapor semester secara manual", "Menghitung tunjangan sertifikasi guru"], ans: 1, img: null
+            },
+            {
+                id: 50, cat: "Digitalisasi", 
+                q: "Simbol ikon gembok kecil di bilah alamat (address bar) browser saat mengakses situs web pendidikan menunjukkan bahwa...",
+                options: ["Situs web sedang mengalami gangguan akses", "Koneksi jaringan ke situs tersebut aman dan terenkripsi (HTTPS)", "Komputer terdeteksi virus berbahaya", "Situs tersebut tidak memerlukan kuota data"], ans: 1, 
+                img: "https://placehold.co/400x200/0284c7/ffffff?text=Keamanan+HTTPS+dan+Gembok"
+            }
+        ];
+
+        // --- STATE APLIKASI ---
+        let state = {
+            view: 'home', // 'home', 'panitia_login', 'panitia_dash', 'peserta_login', 'ujian', 'hasil'
+            panitiaUser: '',
+            panitiaPass: '',
+            pesertaNama: '',
+            pesertaAsal: '',
+            pesertaNPA: '',
+            currentQuestion: 0,
+            answers: {}, // index soal -> pilihan user
+            shuffledQuestions: [],
+            timeLeft: 90 * 60, // 90 menit dalam detik
+            timerInterval: null,
+            examStarted: false,
+            violations: 0,
+            scoreData: null
+        };
+
+        // Load data peserta tersimpan dari localStorage untuk dashboard panitia
+        function getRegisteredParticipants() {
+            let data = localStorage.getItem('stc_participants');
+            return data ? JSON.parse(data) : [
+                { nama: "H. Aceng Juanda, S.Pd.", asal: "SDN 1 Samarang", npa: "32050710242", nilai: 88, waktu: "45 Menit", pelanggaran: 0, status: "Selesai" },
+                { nama: "Uus Kusaeri", asal: "SDN 1 Tanjungkarya", npa: "32050717100", nilai: 92, waktu: "42 Menit", pelanggaran: 0, status: "Selesai" },
+                { nama: "Rina Farida, S.Pd.", asal: "SDN 3 Cisarua", npa: "32050719381", nilai: 78, waktu: "60 Menit", pelanggaran: 1, status: "Selesai" }
+            ];
+        }
+
+        function saveParticipantResult(res) {
+            let list = getRegisteredParticipants();
+            list.unshift(res);
+            localStorage.setItem('stc_participants', JSON.stringify(list));
+        }
+
+        // --- RENDER ROUTER UTAMA ---
+        function render() {
+            const app = document.getElementById('app');
+            app.innerHTML = '';
+
+            if (state.view === 'home') {
+                app.innerHTML = renderHome();
+            } else if (state.view === 'panitia_login') {
+                app.innerHTML = renderPanitiaLogin();
+            } else if (state.view === 'panitia_dash') {
+                app.innerHTML = renderPanitiaDashboard();
+            } else if (state.view === 'peserta_login') {
+                app.innerHTML = renderPesertaLogin();
+            } else if (state.view === 'ujian') {
+                app.innerHTML = renderUjian();
+            } else if (state.view === 'hasil') {
+                app.innerHTML = renderHasil();
+            }
+        }
+
+        // --- HALAMAN UTAMA (HOME) ---
+        function renderHome() {
+            return `
+                <div class="flex-1 flex flex-col items-center justify-center p-4 bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 text-white">
+                    <div class="max-w-md w-full bg-white/10 backdrop-blur-md rounded-2xl p-8 shadow-2xl border border-white/20 text-center">
+                        <div class="w-20 h-20 bg-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg text-3xl">
+                            <i class="fa-solid fa-graduation-cap text-white"></i>
+                        </div>
+                        <span class="bg-amber-400 text-slate-900 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Smart Teacher Competition 2026</span>
+                        <h1 class="text-2xl font-bold mt-3 mb-1">CBT Online Resmi STC PGRI</h1>
+                        <p class="text-slate-300 text-sm mb-8">Peningkatan Kompetensi, Penguatan Profesi, Maju Bersama</p>
+                        
+                        <div class="space-y-4">
+                            <button onclick="switchView('peserta_login')" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center justify-center gap-3">
+                                <i class="fa-solid fa-user-pen"></i> Mulai Ujian Peserta
+                            </button>
+                            <button onclick="switchView('panitia_login')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-3 px-6 rounded-xl border border-slate-600 transition flex items-center justify-center gap-3">
+                                <i class="fa-solid fa-lock"></i> Dashboard Panitia & Live Score
+                            </button>
+                        </div>
+                        <div class="mt-8 text-xs text-slate-400 border-t border-white/10 pt-4">
+                            Proporsi Soal: AD/ART (40%) | Hardware (20%) | Software (20%) | Digitalisasi (20%)
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- LOGIN PANITIA ---
+        function renderPanitiaLogin() {
+            return `
+                <div class="flex-1 flex items-center justify-center p-4 bg-slate-900 text-white">
+                    <div class="max-w-md w-full bg-slate-800 rounded-2xl p-8 border border-slate-700 shadow-xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-shield-halved text-amber-400"></i> Login Panitia STC</h2>
+                            <button onclick="switchView('home')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Username Panitia</label>
+                                <input type="text" id="p_user" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400" placeholder="admin_stc">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Password</label>
+                                <input type="password" id="p_pass" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400" placeholder="••••••••">
+                            </div>
+                            <button onclick="handlePanitiaLogin()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg">Masuk Dashboard</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handlePanitiaLogin() {
+            const u = document.getElementById('p_user').value;
+            const p = document.getElementById('p_pass').value;
+            if(u === 'admin' || u === 'panitia' || u.length > 0) {
+                state.view = 'panitia_dash';
+                render();
+            } else {
+                alert('Username atau Password salah!');
+            }
+        }
+
+        // --- DASHBOARD PANITIA & LIVE SCORE ---
+        function renderPanitiaDashboard() {
+            const participants = getRegisteredParticipants();
+            // Urutkan berdasarkan nilai tertinggi, lalu waktu tercepat
+            participants.sort((a, b) => b.nilai - a.nilai);
+
+            return `
+                <div class="flex-1 flex flex-col bg-slate-100">
+                    <header class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-amber-500 text-slate-950 px-3 py-1 rounded-lg font-bold text-sm">PANITIA STC</div>
+                            <h1 class="font-bold text-lg">Live Score & Monitoring Peserta</h1>
+                        </div>
+                        <button onclick="switchView('home')" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-lg text-sm transition"><i class="fa-solid fa-right-from-bracket mr-2"></i> Keluar</button>
+                    </header>
+                    
+                    <main class="flex-1 max-w-6xl w-full mx-auto p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                                <p class="text-xs text-slate-500 font-semibold uppercase">Total Peserta Selesai</p>
+                                <h3 class="text-3xl font-bold text-slate-800 mt-1">${participants.length} Guru</h3>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                                <p class="text-xs text-slate-500 font-semibold uppercase">Durasi Ujian Maksimal</p>
+                                <h3 class="text-3xl font-bold text-emerald-600 mt-1">90 Menit</h3>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                                <p class="text-xs text-slate-500 font-semibold uppercase">Sistem Keamanan PWA</p>
+                                <h3 class="text-3xl font-bold text-indigo-600 mt-1">Anti-Cheat Aktif</h3>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div class="p-5 border-b border-slate-200 flex justify-between items-center">
+                                <h3 class="font-bold text-slate-800 text-lg"><i class="fa-solid fa-trophy text-amber-500 mr-2"></i> Peringkat Sementera Live Score</h3>
+                                <button onclick="render()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg transition font-medium"><i class="fa-solid fa-rotate mr-1"></i> Refresh Data</button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                                            <th class="p-4">Peringkat</th>
+                                            <th class="p-4">Nama Peserta</th>
+                                            <th class="p-4">Unit Kerja / Asal</th>
+                                            <th class="p-4">NPA PGRI</th>
+                                            <th class="p-4">Pelanggaran</th>
+                                            <th class="p-4">Waktu Selesai</th>
+                                            <th class="p-4 text-center">Nilai Akhir</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-sm">
+                                        ${participants.map((p, idx) => `
+                                            <tr class="hover:bg-slate-50 transition ${idx === 0 ? 'bg-amber-50/50 font-medium' : ''}">
+                                                <td class="p-4">
+                                                    ${idx === 0 ? '<span class="bg-amber-500 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow">1</span>' : 
+                                                      idx === 1 ? '<span class="bg-slate-300 text-slate-800 w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">2</span>' : 
+                                                      idx === 2 ? '<span class="bg-amber-700/60 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">3</span>' : 
+                                                      `<span class="text-slate-500 font-bold pl-2">${idx+1}</span>`}
+                                                </td>
+                                                <td class="p-4 font-semibold text-slate-800">${p.nama}</td>
+                                                <td class="p-4 text-slate-600">${p.asal}</td>
+                                                <td class="p-4 font-mono text-xs text-slate-500">${p.npa}</td>
+                                                <td class="p-4">
+                                                    ${p.pelanggaran > 0 ? `<span class="bg-red-100 text-red-700 text-xs px-2.5 py-1 rounded-full font-bold">${p.pelanggaran} Kali (-${p.pelanggaran}%)</span>` : `<span class="text-emerald-600 text-xs font-semibold">Bersih (0)</span>`}
+                                                </td>
+                                                <td class="p-4 text-slate-600 text-xs"><i class="fa-regular fa-clock mr-1 text-slate-400"></i> ${p.waktu}</td>
+                                                <td class="p-4 text-center">
+                                                    <span class="bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-xl text-sm">${p.nilai}</span>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            `;
+        }
+
+        // --- LOGIN PESERTA ---
+        function renderPesertaLogin() {
+            return `
+                <div class="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-indigo-950 text-white">
+                    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-bold flex items-center gap-2"><i class="fa-solid fa-user-graduate text-emerald-400"></i> Registrasi Peserta STC</h2>
+                            <button onclick="switchView('home')" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nama Lengkap & Gelar</label>
+                                <input type="text" id="inp_nama" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-400" placeholder="Contoh: Uus Kusaeri, S.Pd.">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Asal Sekolah / Unit Kerja</label>
+                                <input type="text" id="inp_asal" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-400" placeholder="Contoh: SDN 1 Tanjungkarya">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Nomor Pokok Anggota (NPA PGRI)</label>
+                                <input type="text" id="inp_npa" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-400" placeholder="320507xxxxxx">
+                            </div>
+                            <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700/60 text-xs text-slate-300 space-y-1">
+                                <p class="font-semibold text-amber-400"><i class="fa-solid fa-circle-exclamation mr-1"></i> Peraturan Penting Ujian:</p>
+                                <p>• Jumlah Soal: 50 Pilihan Ganda (Acak tiap peserta).</p>
+                                <p>• Durasi Pengerjaan: 90 Menit.</p>
+                                <p>• Dilarang minimize/pindah tab! Pelanggaran dicatat & dipotong 1%.</p>
+                            </div>
+                            <button onclick="startExam()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold py-3.5 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-play"></i> Mulai Ujian Sekarang
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- MULAI UJIAN & ACAK SOAL ---
+        function startExam() {
+            const nama = document.getElementById('inp_nama').value.trim();
+            const asal = document.getElementById('inp_asal').value.trim();
+            const npa = document.getElementById('inp_npa').value.trim();
+
+            if(!nama || !asal || !npa) {
+                alert('Mohon lengkapi semua data diri Anda terlebih dahulu!');
+                return;
+            }
+
+            state.pesertaNama = nama;
+            state.pesertaAsal = asal;
+            state.pesertaNPA = npa;
+            state.currentQuestion = 0;
+            state.answers = {};
+            state.violations = 0;
+            state.timeLeft = 90 * 60; // 90 menit
+
+            // Acak soal (Fisher-Yates Shuffle) agar tiap peserta mendapat urutan berbeda
+            let cloned = [...BANK_SOAL];
+            for (let i = cloned.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cloned[i], cloned[j]] = [cloned[j], cloned[i]];
+            }
+            state.shuffledQuestions = cloned;
+            state.examStarted = true;
+            state.view = 'ujian';
+
+            render();
+            startTimer();
+            initAntiCheat();
+        }
+
+        // --- TIMER UJIAN ---
+        function startTimer() {
+            if(state.timerInterval) clearInterval(state.timerInterval);
+            state.timerInterval = setInterval(() => {
+                if(state.timeLeft > 0) {
+                    state.timeLeft--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(state.timerInterval);
+                    finishExam();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const el = document.getElementById('timer-box');
+            if(el) {
+                const m = Math.floor(state.timeLeft / 60);
+                const s = state.timeLeft % 60;
+                el.innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            }
+        }
+
+        // --- ANTI-CHEAT PWA (DETEKSI MINIMIZE / BLUR) ---
+        function initAntiCheat() {
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            window.addEventListener('blur', handleBlurWindow);
+        }
+
+        function removeAntiCheat() {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('blur', handleBlurWindow);
+        }
+
+        function handleVisibilityChange() {
+            if (document.hidden && state.view === 'ujian') {
+                registerViolation();
+            }
+        }
+
+        function handleBlurWindow() {
+            if (state.view === 'ujian') {
+                registerViolation();
+            }
+        }
+
+        function registerViolation() {
+            state.violations++;
+            showViolationModal();
+        }
+
+        function showViolationModal() {
+            const modal = document.getElementById('violation-modal');
+            if(modal) {
+                document.getElementById('v-count').innerText = state.violations;
+                modal.classList.remove('hidden');
+            }
+        }
+
+        function closeViolationModal() {
+            const modal = document.getElementById('violation-modal');
+            if(modal) {
+                modal.classList.add('hidden');
+            }
+        }
+
+        // --- HALAMAN UJIAN UTAMA ---
+        function renderUjian() {
+            const q = state.shuffledQuestions[state.currentQuestion];
+            const totalQ = state.shuffledQuestions.length;
+            const m = Math.floor(state.timeLeft / 60);
+            const s = state.timeLeft % 60;
+
+            return `
+                <div class="flex-1 flex flex-col bg-slate-100 select-none">
+                    <!-- HEADER UJIAN -->
+                    <header class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-md">
+                        <div>
+                            <span class="bg-emerald-500 text-slate-950 font-bold text-xs px-2.5 py-1 rounded-md uppercase">STC 2026 CBT</span>
+                            <h2 class="font-bold text-sm sm:text-base mt-1">${state.pesertaNama} (${state.pesertaAsal})</h2>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="bg-slate-800 border border-slate-700 px-4 py-2 rounded-xl flex items-center gap-2">
+                                <i class="fa-solid fa-clock text-amber-400"></i>
+                                <span id="timer-box" class="font-mono font-bold text-amber-400 text-base">${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <!-- KONTEN UTAMA SOAL -->
+                    <main class="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <!-- SOAL BOX (3 Kolom) -->
+                        <div class="md:col-span-3 flex flex-col space-y-6">
+                            <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex-1 flex flex-col justify-between">
+                                <div>
+                                    <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-100">
+                                        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">Soal Nomor ${state.currentQuestion + 1} dari ${totalQ}</span>
+                                        <span class="text-xs font-semibold bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">Kategori: ${q.cat}</span>
+                                    </div>
+                                    <p class="text-slate-800 font-medium text-base sm:text-lg mb-6 leading-relaxed">${q.q}</p>
+                                    
+                                    ${q.img ? `
+                                        <div class="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
+                                            <img src="${q.img}" alt="Stimulus Soal" class="max-h-48 mx-auto rounded-lg shadow-sm object-contain">
+                                            <span class="text-xs text-slate-400 mt-2 block"><i class="fa-solid fa-image mr-1"></i> Stimulus Gambar / Ilustrasi Soal</span>
+                                        </div>
+                                    ` : ''}
+
+                                    <div class="space-y-3">
+                                        ${q.options.map((opt, idx) => `
+                                            <label onclick="selectAnswer(${state.currentQuestion}, ${idx})" class="flex items-center gap-4 p-4 rounded-xl border-2 transition cursor-pointer ${state.answers[state.currentQuestion] === idx ? 'border-emerald-500 bg-emerald-50/50 text-emerald-950 font-medium' : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'}">
+                                                <div class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs uppercase ${state.answers[state.currentQuestion] === idx ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}">
+                                                    ${String.fromCharCode(65 + idx)}
+                                                </div>
+                                                <span class="flex-1 text-sm sm:text-base">${opt}</span>
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-between items-center mt-8 pt-4 border-t border-slate-100">
+                                    <button onclick="prevQuestion()" ${state.currentQuestion === 0 ? 'disabled' : ''} class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-medium text-sm disabled:opacity-40 hover:bg-slate-50 transition">
+                                        <i class="fa-solid fa-arrow-left mr-2"></i> Sebelumnya
+                                    </button>
+                                    ${state.currentQuestion < totalQ - 1 ? `
+                                        <button onclick="nextQuestion()" class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm transition shadow">
+                                            Selanjutnya <i class="fa-solid fa-arrow-right ml-2"></i>
+                                        </button>
+                                    ` : `
+                                        <button onclick="confirmFinish()" class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition shadow-lg">
+                                            <i class="fa-solid fa-check-double mr-2"></i> Selesai & Kirim Ujian
+                                        </button>
+                                    `}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- NAVIGASI NOMOR SOAL (1 Kolom) -->
+                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col h-fit">
+                            <h3 class="font-bold text-slate-800 text-sm mb-3 pb-2 border-b border-slate-100">Nomor Soal</h3>
+                            <div class="grid grid-cols-5 gap-2 max-h-96 overflow-y-auto p-1">
+                                ${state.shuffledQuestions.map((_, idx) => `
+                                    <button onclick="goToQuestion(${idx})" class="w-full aspect-square rounded-xl font-bold text-xs flex items-center justify-center transition ${state.currentQuestion === idx ? 'bg-indigo-600 text-white shadow' : state.answers[idx] !== undefined ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+                                        ${idx + 1}
+                                    </button>
+                                `).join('')}
+                            </div>
+                            <div class="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 space-y-1">
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-emerald-100 border border-emerald-300 inline-block"></span> Sudah Dijawab</div>
+                                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded bg-slate-100 inline-block"></span> Belum Dijawab</div>
+                            </div>
+                        </div>
+                    </main>
+
+                    <!-- MODAL PERINGATAN PELANGGARAN ANTI-CHEAT -->
+                    <div id="violation-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+                        <div class="bg-white max-w-md w-full rounded-2xl p-6 shadow-2xl text-center space-y-4">
+                            <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-slate-900">Peringatan Pelanggaran Ujian!</h3>
+                            <p class="text-slate-600 text-sm">Sistem mendeteksi Anda meminimalkan peramban atau keluar dari halaman ujian. Pelanggaran ke-<span id="v-count" class="font-bold text-red-600">1</span> tercatat dan nilai Anda akan dipotong 1%.</p>
+                            <button onclick="closeViolationModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl transition">
+                                Saya Mengerti, Lanjutkan Ujian
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function selectAnswer(qIdx, optIdx) {
+            state.answers[qIdx] = optIdx;
+            render();
+        }
+
+        function nextQuestion() {
+            if(state.currentQuestion < state.shuffledQuestions.length - 1) {
+                state.currentQuestion++;
+                render();
+            }
+        }
+
+        function prevQuestion() {
+            if(state.currentQuestion > 0) {
+                state.currentQuestion--;
+                render();
+            }
+        }
+
+        function goToQuestion(idx) {
+            state.currentQuestion = idx;
+            render();
+        }
+
+        function confirmFinish() {
+            const answeredCount = Object.keys(state.answers).length;
+            const unans = state.shuffledQuestions.length - answeredCount;
+            if(unans > 0) {
+                if(!confirm(`Masih ada ${unans} soal yang belum dijawab. Apakah Anda yakin ingin mengakhiri ujian?`)) return;
+            } else {
+                if(!confirm('Apakah Anda yakin ingin mengirimkan jawaban ujian ini?')) return;
+            }
+            finishExam();
+        }
+
+        // --- SELESAI UJIAN & KALKULASI SKOR ---
+        function finishExam() {
+            removeAntiCheat();
+            if(state.timerInterval) clearInterval(state.timerInterval);
+
+            let correctCount = 0;
+            state.shuffledQuestions.forEach((q, idx) => {
+                if(state.answers[idx] === q.ans) {
+                    correctCount++;
+                }
+            });
+
+            // Skor mentah 0-100
+            let rawScore = Math.round((correctCount / state.shuffledQuestions.length) * 100);
+            
+            // Pengurangan penalti pelanggaran (1 pelanggaran = -1%)
+            let finalScore = Math.max(0, rawScore - state.violations);
+
+            const durationUsed = Math.floor((90 * 60 - state.timeLeft) / 60);
+
+            state.scoreData = {
+                nama: state.pesertaNama,
+                asal: state.pesertaAsal,
+                npa: state.pesertaNPA,
+                nilai: finalScore,
+                benar: correctCount,
+                salah: state.shuffledQuestions.length - correctCount,
+                pelanggaran: state.violations,
+                waktu: `${durationUsed} Menit`,
+                status: "Selesai"
+            };
+
+            saveParticipantResult(state.scoreData);
+            state.view = 'hasil';
+            render();
+        }
+
+        // --- HALAMAN HASIL UJIAN PESERTA ---
+        function renderHasil() {
+            const d = state.scoreData;
+            return `
+                <div class="flex-1 flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-indigo-950 text-white">
+                    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl text-center space-y-6">
+                        <div class="w-20 h-20 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full flex items-center justify-center mx-auto text-3xl">
+                            <i class="fa-solid fa-award"></i>
+                        </div>
+                        <div>
+                            <span class="bg-emerald-400 text-slate-950 font-bold text-xs px-3 py-1 rounded-full uppercase tracking-wider">Ujian Selesai Berhasil</span>
+                            <h2 class="text-2xl font-bold mt-2">${d.nama}</h2>
+                            <p class="text-slate-400 text-sm">${d.asal} • NPA: ${d.npa}</p>
+                        </div>
+
+                        <div class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700 space-y-3">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Jawaban Benar:</span>
+                                <span class="font-bold text-emerald-400">${d.benar} / 50</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Total Pelanggaran:</span>
+                                <span class="font-bold text-red-400">${d.pelanggaran} Kali (-${d.pelanggaran}%)</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Durasi Pengerjaan:</span>
+                                <span class="font-bold text-slate-200">${d.waktu}</span>
+                            </div>
+                            <div class="pt-3 border-t border-slate-700 flex justify-between items-center">
+                                <span class="font-semibold text-slate-300">Nilai Akhir:</span>
+                                <span class="text-3xl font-extrabold text-amber-400">${d.nilai}</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <button onclick="switchView('panitia_dash')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition shadow">
+                                <i class="fa-solid fa-trophy mr-2"></i> Lihat Peringkat Live Score Panitia
+                            </button>
+                            <button onclick="switchView('home')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 rounded-xl transition">
+                                Kembali ke Beranda Utama
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function switchView(v) {
+            state.view = v;
+            render();
+        }
+
+        // Inisialisasi Pertama
+        window.onload = function() {
+            render();
+        };
+    </script>
+</body>
+</html>
