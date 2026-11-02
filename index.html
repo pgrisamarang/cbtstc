@@ -482,13 +482,15 @@
         async function handlePanitiaLogin() {
             const u = document.getElementById('p_user').value;
             const p = document.getElementById('p_pass').value;
-            if(u === 'admin' || u === 'panitia' || u.length > 0) {
+            
+            // Kunci Login Panitia (Hanya admin yang tau)
+            if(u === 'admin_stc' && p === 'pgri2026') {
                 document.getElementById('btn-login-panitia').innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengambil Data...';
                 await fetchParticipants();
                 state.view = 'panitia_dash';
                 render();
             } else {
-                alert('Username atau Password salah!');
+                alert('Akses Ditolak! Username atau Password Panitia salah.');
             }
         }
 
@@ -926,9 +928,6 @@
                         </div>
 
                         <div class="space-y-3">
-                            <button onclick="goToDashboardFromHasil()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition shadow">
-                                <i class="fa-solid fa-trophy mr-2"></i> Lihat Peringkat Live Score Panitia
-                            </button>
                             <button onclick="switchView('home')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 rounded-xl transition">
                                 Kembali ke Beranda Utama
                             </button>
@@ -936,13 +935,6 @@
                     </div>
                 </div>
             `;
-        }
-
-        async function goToDashboardFromHasil() {
-            showLoading("Memuat Data Live Score...");
-            await fetchParticipants();
-            hideLoading();
-            switchView('panitia_dash');
         }
 
         function switchView(v) {
