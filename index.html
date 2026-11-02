@@ -4,12 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Teacher Competition (STC) - CBT Online</title>
+    <!-- Firebase SDK (Compat Version untuk HTML murni) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Inter & Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase SDK (Compat Version untuk integrasi PWA single-file) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
@@ -21,6 +29,42 @@
 
     <!-- SCRIPT LOGIC -->
     <script>
+        // --- INISIALISASI FIREBASE ---
+        // TODO: Ganti blok firebaseConfig di bawah ini dengan yang Anda copy dari Firebase Console!
+        const firebaseConfig = {
+          apiKey: "AIzaSyC_2pCRdFGfWivtP27ynr-cjf8S0ius6pI",
+          authDomain: "stc-pgri-cbt.firebaseapp.com",
+          projectId: "stc-pgri-cbt",
+          storageBucket: "stc-pgri-cbt.firebasestorage.app",
+          messagingSenderId: "1003836044382",
+          appId: "1:1003836044382:web:b6598f722e1954972ef0cf",
+          measurementId: "G-L7BFL0RY2L"
+            };
+        
+        // Inisialisasi Firebase App & Firestore
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        // Variabel global penyimpan data Live Score
+        let liveParticipants = [];
+
+        // Pendengar Real-time Firestore untuk Live Score Panitia
+        db.collection("peserta_stc")
+          .onSnapshot((querySnapshot) => {
+              liveParticipants = [];
+              querySnapshot.forEach((doc) => {
+                  liveParticipants.push(doc.data());
+              });
+              
+              // Jika panitia sedang buka dashboard, render ulang tabel otomatis
+              if (state.view === 'panitia_dash') {
+                  const app = document.getElementById('app');
+                  if (app) app.innerHTML = renderPanitiaDashboard();
+              }
+          });
+
         // --- BANK SOAL LENGKAP 50 SOAL SESUAI KISI-KISI STC ---
         const BANK_SOAL = [
             // BAGIAN 1: AD/ART PGRI (20 Soal - 40%)
@@ -307,20 +351,37 @@
             scoreData: null
         };
 
-        // Load data peserta tersimpan dari localStorage untuk dashboard panitia
+        // Load data peserta (Sekarang terhubung dengan Live Database Firebase)
         function getRegisteredParticipants() {
-            let data = localStorage.getItem('stc_participants');
-            return data ? JSON.parse(data) : [
-                { nama: "H. Aceng Juanda, S.Pd.", asal: "SDN 1 Samarang", npa: "32050710242", nilai: 88, waktu: "45 Menit", pelanggaran: 0, status: "Selesai" },
-                { nama: "Uus Kusaeri", asal: "SDN 1 Tanjungkarya", npa: "32050717100", nilai: 92, waktu: "42 Menit", pelanggaran: 0, status: "Selesai" },
-                { nama: "Rina Farida, S.Pd.", asal: "SDN 3 Cisarua", npa: "32050719381", nilai: 78, waktu: "60 Menit", pelanggaran: 1, status: "Selesai" }
-            ];
+            // Mengurutkan berdasarkan nilai tertinggi, jika sama urutkan dari durasi tercepat
+            let sorted = [...liveParticipants];
+            sorted.sort((a, b) => {
+                if (b.nilai !== a.nilai) {
+                    return b.nilai - a.nilai; 
+                }
+                // Tie breaker: waktu tercepat (parsing dari "XX Menit")
+                let waktuA = parseInt(a.waktu) || 90;
+                let waktuB = parseInt(b.waktu) || 90;
+                return waktuA - waktuB;
+            });
+            return sorted;
         }
 
         function saveParticipantResult(res) {
-            let list = getRegisteredParticipants();
-            list.unshift(res);
-            localStorage.setItem('stc_participants', JSON.stringify(list));
+            // Simpan langsung ke Cloud Firestore. 
+            // Menggunakan NPA sebagai ID Dokumen agar data tertimpa jika NPA sama ujian 2 kali
+            db.collection("peserta_stc").doc(res.npa).set(res)
+                .then(() => {
+                    console.log("Data berhasil dikirim ke Cloud Firebase!");
+                })
+                .catch((error) => {
+                    console.error("Error menyimpan data: ", error);
+                    alert("Koneksi terputus! Data disimpan secara luring sementara.");
+                    // Fallback lokal jika internet putus
+                    let list = JSON.parse(localStorage.getItem('stc_offline') || '[]');
+                    list.push(res);
+                    localStorage.setItem('stc_offline', JSON.stringify(list));
+                });
         }
 
         // --- RENDER ROUTER UTAMA ---
@@ -389,17 +450,19 @@
                                 <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Password</label>
                                 <input type="password" id="p_pass" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-amber-400" placeholder="••••••••">
                             </div>
-                            <button onclick="handlePanitiaLogin()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg">Masuk Dashboard</button>
+                            <button id="btn-login-panitia" onclick="handlePanitiaLogin()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg">Masuk Dashboard</button>
                         </div>
                     </div>
                 </div>
             `;
         }
 
-        function handlePanitiaLogin() {
+        async function handlePanitiaLogin() {
             const u = document.getElementById('p_user').value;
             const p = document.getElementById('p_pass').value;
             if(u === 'admin' || u === 'panitia' || u.length > 0) {
+                document.getElementById('btn-login-panitia').innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Mengambil Data...';
+                await fetchParticipants();
                 state.view = 'panitia_dash';
                 render();
             } else {
@@ -409,9 +472,8 @@
 
         // --- DASHBOARD PANITIA & LIVE SCORE ---
         function renderPanitiaDashboard() {
-            const participants = getRegisteredParticipants();
-            // Urutkan berdasarkan nilai tertinggi, lalu waktu tercepat
-            participants.sort((a, b) => b.nilai - a.nilai);
+            // Panggil trigger firebase
+            getRegisteredParticipants();
 
             return `
                 <div class="flex-1 flex flex-col bg-slate-100">
@@ -427,27 +489,33 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                                 <p class="text-xs text-slate-500 font-semibold uppercase">Total Peserta Selesai</p>
-                                <h3 class="text-3xl font-bold text-slate-800 mt-1">${participants.length} Guru</h3>
+                                <h3 id="total-peserta-count" class="text-3xl font-bold text-slate-800 mt-1">...</h3>
                             </div>
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                                 <p class="text-xs text-slate-500 font-semibold uppercase">Durasi Ujian Maksimal</p>
                                 <h3 class="text-3xl font-bold text-emerald-600 mt-1">90 Menit</h3>
                             </div>
                             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                                <p class="text-xs text-slate-500 font-semibold uppercase">Sistem Keamanan PWA</p>
-                                <h3 class="text-3xl font-bold text-indigo-600 mt-1">Anti-Cheat Aktif</h3>
+                                <p class="text-xs text-slate-500 font-semibold uppercase">Status Database Cloud</p>
+                                <h3 class="text-3xl font-bold text-blue-600 mt-1 flex items-center"><i class="fa-solid fa-cloud-check mr-2 text-xl"></i> Online</h3>
                             </div>
                         </div>
 
                         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                            <div class="p-5 border-b border-slate-200 flex justify-between items-center">
-                                <h3 class="font-bold text-slate-800 text-lg"><i class="fa-solid fa-trophy text-amber-500 mr-2"></i> Peringkat Sementera Live Score</h3>
-                                <button onclick="render()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg transition font-medium"><i class="fa-solid fa-rotate mr-1"></i> Refresh Data</button>
+                            <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+                                <h3 class="font-bold text-slate-800 text-lg"><i class="fa-solid fa-trophy text-amber-500 mr-2"></i> Peringkat Live Score (Otomatis)</h3>
+                                <div class="flex items-center gap-2 text-xs font-semibold text-emerald-600">
+                                    <span class="relative flex h-3 w-3">
+                                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                      <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                    </span>
+                                    Syncing...
+                                </div>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse">
                                     <thead>
-                                        <tr class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold border-b border-slate-200">
+                                        <tr class="bg-slate-100 text-slate-600 text-xs uppercase font-bold border-b border-slate-200">
                                             <th class="p-4">Peringkat</th>
                                             <th class="p-4">Nama Peserta</th>
                                             <th class="p-4">Unit Kerja / Asal</th>
@@ -457,27 +525,8 @@
                                             <th class="p-4 text-center">Nilai Akhir</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-slate-100 text-sm">
-                                        ${participants.map((p, idx) => `
-                                            <tr class="hover:bg-slate-50 transition ${idx === 0 ? 'bg-amber-50/50 font-medium' : ''}">
-                                                <td class="p-4">
-                                                    ${idx === 0 ? '<span class="bg-amber-500 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow">1</span>' : 
-                                                      idx === 1 ? '<span class="bg-slate-300 text-slate-800 w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">2</span>' : 
-                                                      idx === 2 ? '<span class="bg-amber-700/60 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">3</span>' : 
-                                                      `<span class="text-slate-500 font-bold pl-2">${idx+1}</span>`}
-                                                </td>
-                                                <td class="p-4 font-semibold text-slate-800">${p.nama}</td>
-                                                <td class="p-4 text-slate-600">${p.asal}</td>
-                                                <td class="p-4 font-mono text-xs text-slate-500">${p.npa}</td>
-                                                <td class="p-4">
-                                                    ${p.pelanggaran > 0 ? `<span class="bg-red-100 text-red-700 text-xs px-2.5 py-1 rounded-full font-bold">${p.pelanggaran} Kali (-${p.pelanggaran}%)</span>` : `<span class="text-emerald-600 text-xs font-semibold">Bersih (0)</span>`}
-                                                </td>
-                                                <td class="p-4 text-slate-600 text-xs"><i class="fa-regular fa-clock mr-1 text-slate-400"></i> ${p.waktu}</td>
-                                                <td class="p-4 text-center">
-                                                    <span class="bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-xl text-sm">${p.nilai}</span>
-                                                </td>
-                                            </tr>
-                                        `).join('')}
+                                    <tbody id="table-body-peserta" class="divide-y divide-slate-100 text-sm">
+                                        <!-- Data tabel di-render dinamis oleh Firebase -->
                                     </tbody>
                                 </table>
                             </div>
@@ -765,7 +814,7 @@
         }
 
         // --- SELESAI UJIAN & KALKULASI SKOR ---
-        function finishExam() {
+        async function finishExam() {
             removeAntiCheat();
             if(state.timerInterval) clearInterval(state.timerInterval);
 
@@ -796,7 +845,11 @@
                 status: "Selesai"
             };
 
-            saveParticipantResult(state.scoreData);
+            // Menampilkan loading state sebentar
+            document.body.innerHTML += `<div id="loading-overlay" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center text-white flex-col"><i class="fa-solid fa-spinner fa-spin text-4xl text-emerald-500 mb-4"></i><p>Menyimpan data ujian Anda ke server...</p></div>`;
+
+            await saveParticipantResult(state.scoreData);
+            
             state.view = 'hasil';
             render();
         }
@@ -836,7 +889,7 @@
                         </div>
 
                         <div class="space-y-3">
-                            <button onclick="switchView('panitia_dash')" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition shadow">
+                            <button onclick="goToDashboardFromHasil()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl transition shadow">
                                 <i class="fa-solid fa-trophy mr-2"></i> Lihat Peringkat Live Score Panitia
                             </button>
                             <button onclick="switchView('home')" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium py-3 rounded-xl transition">
@@ -846,6 +899,12 @@
                     </div>
                 </div>
             `;
+        }
+
+        async function goToDashboardFromHasil() {
+            document.body.innerHTML += `<div id="loading-overlay" class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center text-white flex-col"><i class="fa-solid fa-spinner fa-spin text-4xl text-indigo-500 mb-4"></i><p>Memuat Live Score...</p></div>`;
+            await fetchParticipants();
+            switchView('panitia_dash');
         }
 
         function switchView(v) {
